@@ -7,7 +7,13 @@
 
 # PATH
 export PATH="$HOME/.swiftly/bin:$HOME/.cargo/bin:$HOME/.local/bin:$PATH"
-export EDITOR=nvim VISUAL=nvim
+# Neovim is THE editor everywhere.
+export EDITOR=nvim VISUAL=nvim GIT_EDITOR=nvim KUBE_EDITOR=nvim
+# Pretty man pages via bat.
+if command -v bat >/dev/null; then
+  export MANPAGER="sh -c 'col -bx | bat -l man -p'"
+  export MANROFFOPT=-c
+fi
 
 # History
 HISTFILE=~/.zsh_history
@@ -20,11 +26,20 @@ autoload -Uz compinit && compinit
 bindkey -v
 zstyle ':completion:*' matcher-list 'm:{a-zA-Z}={A-Za-z}'
 
-# fzf: use fd, show hidden (minus .git)
+# fzf: drive with fd; bat/eza previews on Ctrl-T (files) and Alt-C (dirs).
 if command -v fd >/dev/null; then
   export FZF_DEFAULT_COMMAND='fd --type f --hidden --follow --exclude .git'
-  export FZF_DEFAULT_OPTS='--height 40% --layout reverse --border'
+  export FZF_CTRL_T_COMMAND="$FZF_DEFAULT_COMMAND"
+  export FZF_ALT_C_COMMAND='fd --type d --hidden --follow --exclude .git'
+  export FZF_DEFAULT_OPTS='--height 45% --layout reverse --border --info inline'
+  export FZF_CTRL_T_OPTS="--preview 'bat --color=always --style=numbers {} 2>/dev/null || eza --tree --color=always {}'"
+  export FZF_ALT_C_OPTS="--preview 'eza --tree --level=2 --color=always {}'"
 fi
+
+# Fuzzy-find a file and open it in $EDITOR.
+ff() { local f; f=$(fd --type f --hidden --follow --exclude .git | fzf --preview 'bat --color=always --style=numbers {} 2>/dev/null'); [ -n "$f" ] && ${EDITOR:-nvim} "$f"; }
+# Fuzzy-find a directory and cd into it.
+fcd() { local d; d=$(fd --type d --hidden --follow --exclude .git | fzf --preview 'eza --tree --level=2 --color=always {}'); [ -n "$d" ] && cd "$d"; }
 
 # Aliases
 alias ll='eza -la --icons --group-directories-first 2>/dev/null || ls -la'
@@ -52,3 +67,13 @@ _brew_prefix="$(brew --prefix 2>/dev/null)"
 [ -f "$_brew_prefix/share/zsh-fast-syntax-highlighting/fast-syntax-highlighting.plugin.zsh" ] && \
   source "$_brew_prefix/share/zsh-fast-syntax-highlighting/fast-syntax-highlighting.plugin.zsh"
 unset _brew_prefix
+
+# Random usage tip on interactive startup (opt out: export ESSENTIALS_NO_TIPS=1).
+if [[ -o interactive && -z "${ESSENTIALS_NO_TIPS:-}" && -r ~/.config/essentials/tips.txt ]]; then
+  _tip=$(grep -vE '^[[:space:]]*(#|$)' ~/.config/essentials/tips.txt | sort -R | head -1)
+  [ -n "$_tip" ] && print -P "%B%F{yellow}💡 tip%f%b ${_tip} %F{8}— cheatsheet: ~/.config/essentials/cheatsheet.md%f"
+  unset _tip
+fi
+# Quick doc helpers in the fallback shell, mirroring nushell's `essentials`.
+tips()       { grep -vE '^[[:space:]]*(#|$)' ~/.config/essentials/tips.txt; }
+cheatsheet() { bat --style=plain --paging=always -l md ~/.config/essentials/cheatsheet.md 2>/dev/null || cat ~/.config/essentials/cheatsheet.md; }

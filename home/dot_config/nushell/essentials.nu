@@ -21,7 +21,7 @@ def "essentials update" [] {
   try { ^nvim --headless "+Lazy! sync" +qa }
 
   print "==> doom upgrade"
-  let doom = ($nu.home-path | path join '.config' 'emacs' 'bin' 'doom')
+  let doom = ($nu.home-dir | path join '.config' 'emacs' 'bin' 'doom')
   if ($doom | path exists) { try { ^$doom upgrade --force } }
 
   print "==> done. Everything is at latest."
@@ -31,7 +31,7 @@ def "essentials update" [] {
 
 # One-time: generate the age keypair on a trusted machine.
 def "essentials secrets-setup" [] {
-  let dir = ($nu.home-path | path join '.config' 'chezmoi')
+  let dir = ($nu.home-dir | path join '.config' 'chezmoi')
   mkdir $dir
   let key = ($dir | path join 'key.txt')
   if ($key | path exists) {
@@ -84,6 +84,36 @@ def "essentials hooks test" [] {
   if ($h | path exists) { ^$h } else { print "no pre-commit hook found" }
 }
 
+# --- Tips & docs -----------------------------------------------------------
+
+def _tips_file [] { $nu.home-dir | path join '.config' 'essentials' 'tips.txt' }
+
+# Print one random usage tip (shown on shell startup).
+def "essentials tip" [] {
+  let f = (_tips_file)
+  if not ($f | path exists) { return }
+  let tips = (open $f | lines | where {|l| (($l | str trim) != "") and (not ($l | str starts-with "#")) })
+  if ($tips | is-empty) { return }
+  let t = ($tips | get (random int 0..(($tips | length) - 1)))
+  print $"(ansi yellow_bold)💡 tip(ansi reset) ($t) (ansi dark_gray)— `essentials tips` for more(ansi reset)"
+}
+
+# List all tips.
+def "essentials tips" [] {
+  let f = (_tips_file)
+  if ($f | path exists) {
+    open $f | lines | where {|l| (($l | str trim) != "") and (not ($l | str starts-with "#")) }
+      | each {|t| print $"(ansi cyan)•(ansi reset) ($t)" }
+  }
+}
+
+# Open the cheatsheet (aliases, keybindings, workflows).
+def "essentials cheatsheet" [] {
+  let f = ($nu.home-dir | path join '.config' 'essentials' 'cheatsheet.md')
+  if not ($f | path exists) { print "no cheatsheet found"; return }
+  if (which bat | is-not-empty) { ^bat --style=plain --paging=always -l md $f } else { open $f | print }
+}
+
 # Bare `essentials` prints help.
 def "essentials" [] {
   print "essentials — manage this machine's config, toolchains, secrets & hooks"
@@ -92,6 +122,8 @@ def "essentials" [] {
   print "  essentials secret-add <p>    encrypt a file & add it to the repo"
   print "  essentials hooks status      show global git-hooks state"
   print "  essentials hooks enable|disable|test"
+  print "  essentials tip | tips        random / all usage tips"
+  print "  essentials cheatsheet        open the aliases + keybindings cheatsheet"
   print ""
   print "  chezmoi edit <file>   edit a config"
   print "  chezmoi diff          preview pending changes"

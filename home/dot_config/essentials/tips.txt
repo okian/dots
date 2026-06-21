@@ -1,0 +1,38 @@
+# Usage tips — one per line. Shown at random on shell startup.
+# Lines starting with # and blank lines are ignored. Opt out: ESSENTIALS_NO_TIPS=1
+# Edit freely; `essentials tips` lists them all.
+
+# --- moving around ---
+`z <part-of-path>` jumps to a frecent directory (zoxide). `zi` picks interactively.
+`fcd` fuzzy-finds a directory and cd's into it. `cd -` toggles back.
+Press Alt-C to fuzzy-cd into a subdirectory; Ctrl-T to insert a file path.
+`lt` shows a 2-level tree (eza); `ll` is a detailed list with icons.
+In tmux: prefix is Ctrl-a. `|` splits vertical, `-` splits horizontal, prefix+r reloads.
+
+# --- searching ---
+`rg <pattern>` searches file contents fast; add `-t go` / `-t rust` to scope by language.
+`fd <name>` finds files by name (respects .gitignore, skips .git).
+Press Ctrl-R for fuzzy, synced shell history (atuin) — type any part of an old command.
+`ff` fuzzy-finds a file and opens it in Neovim with a bat preview.
+In Neovim: `<space>ff` finds files, `<space>/` greps the project, `<space>fb` lists buffers.
+
+# --- editing ---
+Neovim is $EDITOR everywhere — git, kubectl, and `fc` all open in nvim.
+`v <file>` or `ff` opens Neovim; `<space>e` toggles the file tree.
+`lg` opens lazygit — stage hunks, write commits, manage branches visually.
+Commit subjects need a ticket key (e.g. ROG-1234) — the commit-msg hook enforces it.
+`gf`/`gd` in Neovim jump to definition; `K` shows hover docs; `<space>ca` for code actions.
+
+# --- git & hooks ---
+Direct commits to main/master are blocked — branch with `git switch -c feat/ROG-1-x`.
+Bypass a hook once with `git commit --no-verify`; turn all off with `essentials hooks disable`.
+`git lg` shows a graph log; delta renders side-by-side colored diffs automatically.
+Pushing runs lint + fast tests for the repo's languages; skip with `HOOKS_SKIP_TESTS=1`.
+
+# --- maintenance & tooling ---
+`essentials update` upgrades configs + every toolchain (brew, rust, swift, uv, nvim, doom).
+`chezmoi edit ~/.zshrc` then `chezmoi apply` — never edit managed dotfiles in place.
+`chezmoi re-add` pulls a machine-local change back into the repo; then push it.
+Add a secret with `essentials secret-add <path>` — it's encrypted before it touches git.
+`man <cmd>` is rendered with syntax highlighting via bat. `cat` is bat; `ls` is eza.
+`docker` is aliased to podman — `docker run ...` just works without Docker Desktop.

@@ -35,8 +35,26 @@ if (which eza | is-not-empty) {
   alias lt = eza --tree --level=2 --icons
 }
 
+# Fuzzy-find a file and open it in the editor.
+def ff [] {
+  let file = (^fd --type f --hidden --follow --exclude .git
+    | ^fzf --preview 'bat --color=always --style=numbers {} 2>/dev/null' | str trim)
+  if ($file | is-not-empty) { ^$env.EDITOR $file }
+}
+
+# Fuzzy-find a directory and cd into it.
+def --env fcd [] {
+  let dir = (^fd --type d --hidden --follow --exclude .git
+    | ^fzf --preview 'eza --tree --level=2 --color=always {}' | str trim)
+  if ($dir | is-not-empty) { cd $dir }
+}
+
 # starship / zoxide / carapace / atuin are auto-sourced from the vendor autoload
 # dir populated by env.nu — no manual `source` needed here.
 
-# `essentials update` — pull configs + upgrade every toolchain to latest.
+# `essentials` commands (update, secrets, hooks, tips, cheatsheet).
 source ~/.config/nushell/essentials.nu
+
+# Random usage tip on interactive startup only (opt out with $env.ESSENTIALS_NO_TIPS).
+# Guarded by is-interactive so `nu -c ...` scripts stay clean.
+if $nu.is-interactive and ('ESSENTIALS_NO_TIPS' not-in $env) { essentials tip }

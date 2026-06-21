@@ -30,8 +30,21 @@ your git name/email, then applies all dotfiles and runs the provisioning scripts
 | AI          | Claude Code CLI |
 
 > On macOS, `run_once_after_70-macos-defaults` applies sane system defaults
-> (fast key repeat, show extensions, screenshots → `~/Pictures/Screenshots`, …).
+> (dark mode, orange accent, fast key repeat, screenshots → `~/Pictures/Screenshots`, …).
 > Pushes are validated by CI (template render + shellcheck).
+
+## Docs & tips
+
+Everything is integrated around a few habits — `nvim` is the editor everywhere,
+`fzf`/`fd`/`rg`/`zoxide` for finding things, `lazygit`/`delta` for git.
+
+- **Cheatsheet** — aliases, keybindings, tool reference:
+  [`home/dot_config/essentials/cheatsheet.md`](home/dot_config/essentials/cheatsheet.md)
+  (on a set-up machine: `essentials cheatsheet`).
+- **Workflows & best practices** — how to move/search/edit efficiently:
+  [`home/dot_config/essentials/workflows.md`](home/dot_config/essentials/workflows.md).
+- **Tips** — a random one prints on each shell startup (opt out with
+  `ESSENTIALS_NO_TIPS=1`); `essentials tips` lists them all.
 
 ## How it's organized
 
