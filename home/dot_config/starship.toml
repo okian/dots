@@ -1,0 +1,31 @@
+# Starship prompt — managed by chezmoi.
+add_newline = true
+command_timeout = 1000
+
+format = "$directory$git_branch$git_status$rust$golang$python$nodejs$cmd_duration$line_break$character"
+
+[character]
+success_symbol = "[❯](bold green)"
+error_symbol = "[❯](bold red)"
+vimcmd_symbol = "[❮](bold green)"
+
+[directory]
+truncation_length = 3
+truncate_to_repo = true
+style = "bold cyan"
+
+[git_branch]
+symbol = " "
+
+[cmd_duration]
+min_time = 2000
+format = "[ $duration]($style) "
+
+[rust]
+symbol = " "
+[golang]
+symbol = " "
+[python]
+symbol = " "
+[nodejs]
+symbol = " "

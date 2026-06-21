@@ -1,0 +1,64 @@
+#!/usr/bin/env bash
+# Install Homebrew (both OSes) + all packages from packages.yaml.
+# This script embeds the package list, so editing packages.yaml changes the
+# rendered content and chezmoi re-runs it automatically.
+set -euo pipefail
+
+SUDO=""
+if [ "$(id -u)" -ne 0 ]; then SUDO="sudo"; fi
+
+# --- Homebrew ---------------------------------------------------------------
+if ! command -v brew >/dev/null 2>&1; then
+  echo "==> Installing Homebrew"
+  NONINTERACTIVE=1 /bin/bash -c \
+    "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
+fi
+
+# Make brew available in this shell (paths differ by OS/arch).
+if [ -x /opt/homebrew/bin/brew ]; then
+  eval "$(/opt/homebrew/bin/brew shellenv)"
+elif [ -x /usr/local/bin/brew ]; then
+  eval "$(/usr/local/bin/brew shellenv)"
+elif [ -x /home/linuxbrew/.linuxbrew/bin/brew ]; then
+  eval "$(/home/linuxbrew/.linuxbrew/bin/brew shellenv)"
+fi
+
+echo "==> brew bundle"
+brew bundle --no-lock --file=/dev/stdin <<'BREWFILE'
+{{ range .packages.brew_formulae -}}
+brew "{{ . }}"
+{{ end -}}
+{{ if .isMac -}}
+{{ range .packages.brew_casks -}}
+cask "{{ . }}"
+{{ end -}}
+{{ end -}}
+BREWFILE
+
+{{ if .isLinux -}}
+# --- Linux GUI extras (best effort; only meaningful on a desktop) -----------
+if command -v apt-get >/dev/null 2>&1; then
+  export DEBIAN_FRONTEND=noninteractive
+  $SUDO apt-get install -y {{ range .packages.linux_apt }}{{ . }} {{ end }}|| true
+fi
+if command -v flatpak >/dev/null 2>&1; then
+  {{ range .packages.linux_flatpak -}}
+  flatpak install -y --noninteractive flathub {{ . }} || true
+  {{ end -}}
+fi
+
+# JetBrainsMono Nerd Font (mac gets it via cask; Linux has no brew cask).
+if ! fc-list 2>/dev/null | grep -qi "JetBrainsMono Nerd Font"; then
+  echo "==> Installing JetBrainsMono Nerd Font"
+  fontdir="$HOME/.local/share/fonts"
+  tmpd="$(mktemp -d)"
+  if curl -fsSL -o "$tmpd/JBM.zip" \
+      https://github.com/ryanoasis/nerd-fonts/releases/latest/download/JetBrainsMono.zip; then
+    mkdir -p "$fontdir/JetBrainsMonoNerd"
+    unzip -o "$tmpd/JBM.zip" -d "$fontdir/JetBrainsMonoNerd" >/dev/null
+    fc-cache -f "$fontdir" >/dev/null 2>&1 || true
+  fi
+  rm -rf "$tmpd"
+fi
+{{ end -}}
+echo "==> packages done"

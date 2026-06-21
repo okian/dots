@@ -1,0 +1,109 @@
+# Single source of truth for everything installed via a package manager.
+#
+# Edit this file, then run `chezmoi apply` (or `essentials update`). The
+# run_onchange_ installer scripts embed a hash of this file, so any change
+# here automatically re-runs the relevant installer — no other wiring needed.
+#
+#   brew_formulae : CLI tools, installed via Homebrew on BOTH macOS and Linux.
+#   brew_casks    : GUI apps, macOS only (Homebrew casks don't exist on Linux).
+#   linux_apt     : extra apt packages for Linux GUI/desktop bits.
+#   linux_flatpak : flatpak app IDs used as a Linux GUI fallback.
+#
+# Languages with first-class version managers (rust→rustup, swift→swiftly,
+# python envs→uv) are intentionally NOT listed here; see run_onchange_after_20.
+
+packages:
+  brew_formulae:
+    # chezmoi itself (so it self-updates & stays on PATH)
+    - chezmoi
+    # shells + prompt
+    - nushell
+    - zsh
+    - zsh-autosuggestions
+    - zsh-fast-syntax-highlighting
+    - starship
+    # shell UX: completions, dir env, history sync
+    - carapace
+    - direnv
+    - atuin
+    # editors
+    - neovim
+    - emacs
+    # fuzzy finding + navigation
+    - fzf
+    - zoxide
+    - ripgrep
+    - fd
+    - bat
+    - eza
+    # git + tooling
+    - git
+    - git-delta
+    - lazygit
+    - gh
+    - git-lfs
+    # secrets (age-keygen for the encryption keypair)
+    - age
+    - gnupg
+    - git-crypt
+    # git-hooks tooling (secret scan, linters, formatters)
+    - gitleaks
+    - golangci-lint
+    - swiftlint
+    - swiftformat
+    - ruff
+    - ktlint
+    - shellcheck
+    - shfmt
+    # media
+    - ffmpeg
+    # languages / runtimes managed via brew (latest)
+    - go
+    - python
+    - uv
+    - node          # needed by many LSPs / Claude Code npm fallback
+    # containers
+    - podman
+    - podman-compose
+    # misc utilities
+    - jq
+    - yq
+    - tmux
+    - wget
+    - tree
+
+  # macOS-only GUI apps (Homebrew casks). For each, see linux_flatpak for the
+  # Linux equivalent. Exceptions handled elsewhere:
+  #   - claude, iina : macOS-only (no Linux build).
+  #   - ollama, tailscale : on Linux installed via vendor script
+  #     (see run_onchange_after_60-linux-apps).
+  brew_casks:
+    - wezterm
+    - font-jetbrains-mono-nerd-font
+    # editors / terminals
+    - zed
+    - alacritty
+    # ai / containers
+    - claude
+    - ollama
+    # utilities / comms
+    - google-chrome
+    - tailscale
+    - discord
+    - iina
+
+  # Linux desktop extras (only used when a GUI session is present).
+  linux_apt:
+    - fonts-jetbrains-mono
+    # nvim system clipboard + archive tooling (mac has pbcopy/built-in)
+    - wl-clipboard
+    - xclip
+    - unzip
+
+  # Linux GUI fallback (Flathub app IDs).
+  linux_flatpak:
+    - org.wezfurlong.wezterm
+    - dev.zed.Zed
+    - org.alacritty.Alacritty
+    - com.google.Chrome
+    - com.discordapp.Discord

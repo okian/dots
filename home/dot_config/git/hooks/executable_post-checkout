@@ -1,0 +1,20 @@
+#!/usr/bin/env bash
+# Global post-checkout: after switching branches, remind (or auto-run) when
+# dependency manifests changed. Never blocks.
+_HOOK_TAG="post-checkout"
+HOOK_DIR="$(cd "$(dirname "$0")" && pwd)"
+# shellcheck source=lib/common.sh
+. "$HOOK_DIR/lib/common.sh"
+# shellcheck source=lib/languages.sh
+. "$HOOK_DIR/lib/languages.sh"
+
+hooks_disabled && exit 0
+cfg_bool depsReminder true || exit 0
+
+# Args: <prev_head> <new_head> <is-branch-checkout>
+prev="$1"; new="$2"; is_branch="${3:-0}"
+[ "$is_branch" = 1 ] || exit 0   # ignore file checkouts
+[ -n "$prev" ] && [ -n "$new" ] && [ "$prev" != "$new" ] || exit 0
+
+deps_reminder "$prev" "$new"
+exit 0

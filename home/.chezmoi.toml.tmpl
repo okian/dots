@@ -1,0 +1,32 @@
+{{- /* Prompts once on `chezmoi init`. Answers are stored in the chezmoi   */ -}}
+{{- /* config (NOT in this repo), so nothing personal is committed.        */ -}}
+{{- $name := promptStringOnce . "name" "Full name for git" "Kian Ostad" -}}
+{{- $email := promptStringOnce . "email" "Email for git" "kian.ostad@rogontechnologies.com" -}}
+{{- $signWithSsh := promptBoolOnce . "sign_with_ssh" "Sign git commits with an SSH key" false -}}
+{{- $isUbuntu := false -}}
+{{- if eq .chezmoi.os "linux" -}}
+{{-   $isUbuntu = eq (.chezmoi.osRelease.id | default "") "ubuntu" -}}
+{{- end -}}
+{{- /* The age private key. If it exists, secrets decrypt; if not, they are  */ -}}
+{{- /* skipped entirely (see .chezmoiignore). This is your "password file".  */ -}}
+{{- $keyPath := joinPath .chezmoi.homeDir ".config" "chezmoi" "key.txt" -}}
+{{- $hasKey := stat $keyPath -}}
+
+encryption = "age"
+
+[age]
+    identity = {{ $keyPath | quote }}
+    # PUBLIC recipient key — safe to commit. Run `essentials secrets-setup` to
+    # generate a keypair, then paste the printed public key here and commit.
+    recipient = "age1REPLACE_WITH_YOUR_PUBLIC_KEY"
+
+[data]
+    name = {{ $name | quote }}
+    email = {{ $email | quote }}
+    signWithSsh = {{ $signWithSsh }}
+    # Derived once so templates don't recompute everywhere.
+    isMac = {{ eq .chezmoi.os "darwin" }}
+    isLinux = {{ eq .chezmoi.os "linux" }}
+    isUbuntu = {{ $isUbuntu }}
+    # True when the decryption key is present on this machine.
+    hasSecrets = {{ if $hasKey }}true{{ else }}false{{ end }}

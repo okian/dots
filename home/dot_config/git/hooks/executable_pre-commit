@@ -1,0 +1,62 @@
+#!/usr/bin/env bash
+# Global pre-commit: secret scan, large-file guard, branch protection,
+# format checks (+ optional lint) for detected languages.
+# Bypass: git commit --no-verify   |   HOOKS_DISABLE=1   |   per-check git config.
+_HOOK_TAG="pre-commit"
+HOOK_DIR="$(cd "$(dirname "$0")" && pwd)"
+# shellcheck source=lib/common.sh
+. "$HOOK_DIR/lib/common.sh"
+# shellcheck source=lib/languages.sh
+. "$HOOK_DIR/lib/languages.sh"
+
+hooks_disabled && exit 0
+in_worktree || exit 0
+
+# Don't fight history replay: skip during rebase (content is from old commits).
+if rebase_in_progress; then
+  hook_info "rebase in progress — skipping pre-commit checks"
+  exit 0
+fi
+
+fail=0
+merging=0
+merge_in_progress && merging=1
+
+# --- Branch protection: block direct commits to protected branches ----------
+if cfg_bool blockCommitOnProtected true \
+   && [ "${HOOKS_ALLOW_PROTECTED:-}" != 1 ] \
+   && ! cfg_bool allowProtected false; then
+  b=$(current_branch)
+  if is_protected "$b"; then
+    hook_err "direct commit to protected branch '$b' is blocked"
+    hook_hint "work on a feature branch: git switch -c <type>/<ticket>-<slug>"
+    hook_hint "override (this repo): git config hooks.allowProtected true"
+    hook_hint "override (once): HOOKS_ALLOW_PROTECTED=1 git commit ..."
+    fail=1
+  fi
+fi
+
+# --- Secret scan + large-file guard (always, even on merge commits) ----------
+scan_secrets || fail=1
+check_large_files || fail=1
+
+# --- Format / lint per language (skip during merges: content isn't yours) ----
+if [ "$merging" = 1 ]; then
+  hook_info "merge in progress — skipping format/lint"
+else
+  if cfg_bool formatCheck true; then
+    for l in $(staged_langs); do lang_format_check "$l" || fail=1; done
+  fi
+  if cfg_bool lintOnCommit false; then
+    for l in $(staged_langs); do lang_lint "$l" || fail=1; done
+  fi
+fi
+
+# --- Chain to any repo-local / husky pre-commit -----------------------------
+run_local_hook pre-commit "$@" || fail=1
+
+if [ "$fail" -ne 0 ]; then
+  hook_err "pre-commit checks failed — fix the above, or bypass with: git commit --no-verify"
+  exit 1
+fi
+exit 0

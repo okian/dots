@@ -1,0 +1,109 @@
+#!/usr/bin/env bash
+# Sane macOS system defaults. Renders empty on Linux.
+set -euo pipefail
+{{ if .isMac -}}
+echo "==> Applying macOS defaults"
+
+# --- Keyboard: fast key repeat, no press-and-hold accent popup. ---
+defaults write NSGlobalDomain KeyRepeat -int 2
+defaults write NSGlobalDomain InitialKeyRepeat -int 15
+defaults write NSGlobalDomain ApplePressAndHoldEnabled -bool false
+
+# --- Finder: show all extensions, path + status bars, POSIX path title,
+# default to list view, search current folder, no extension-change nag. ---
+defaults write NSGlobalDomain AppleShowAllExtensions -bool true
+defaults write com.apple.finder AppleShowAllFiles -bool true
+defaults write com.apple.finder ShowPathbar -bool true
+defaults write com.apple.finder ShowStatusBar -bool true
+defaults write com.apple.finder _FXShowPosixPathInTitle -bool true
+defaults write com.apple.finder FXPreferredViewStyle -string "Nlsv"
+defaults write com.apple.finder FXDefaultSearchScope -string "SCcf"
+defaults write com.apple.finder FXEnableExtensionChangeWarning -bool false
+
+# --- Don't write .DS_Store on network or USB volumes. ---
+defaults write com.apple.desktopservices DSDontWriteNetworkStores -bool true
+defaults write com.apple.desktopservices DSDontWriteUSBStores -bool true
+
+# --- Screenshots -> ~/Pictures/Screenshots, PNG, no shadow. ---
+mkdir -p "$HOME/Pictures/Screenshots"
+defaults write com.apple.screencapture location -string "$HOME/Pictures/Screenshots"
+defaults write com.apple.screencapture type -string "png"
+defaults write com.apple.screencapture disable-shadow -bool true
+
+# --- Expand save/print panels by default. ---
+defaults write NSGlobalDomain NSNavPanelExpandedStateForSaveMode -bool true
+defaults write NSGlobalDomain PMPrintingExpandedStateForPrint -bool true
+
+# --- Trackpad: tap to click, three-finger drag. ---
+defaults write com.apple.AppleMultitouchTrackpad Clicking -bool true
+defaults -currentHost write NSGlobalDomain com.apple.mouse.tapBehavior -int 1
+defaults write com.apple.AppleMultitouchTrackpad TrackpadThreeFingerDrag -bool true
+
+# --- Dock: autohide, no delay, smaller icons, no recents, scale effect. ---
+defaults write com.apple.dock autohide -bool true
+defaults write com.apple.dock autohide-delay -float 0
+defaults write com.apple.dock tilesize -int 36
+defaults write com.apple.dock show-recents -bool false
+defaults write com.apple.dock mineffect -string "scale"
+defaults write com.apple.dock mru-spaces -bool false
+
+# --- Menu bar clock: show date + seconds.
+# (Best-effort: on Sonoma+ the clock lives in Control Center and may ignore these.) ---
+defaults write com.apple.menuextra.clock ShowSeconds -bool true
+defaults write com.apple.menuextra.clock ShowDate -int 1
+
+# --- TextEdit: plain text, UTF-8 by default. ---
+defaults write com.apple.TextEdit RichText -int 0
+defaults write com.apple.TextEdit PlainTextEncoding -int 4
+defaults write com.apple.TextEdit PlainTextEncodingForWrite -int 4
+
+# --- Software Update: check daily. ---
+defaults write com.apple.SoftwareUpdate ScheduleFrequency -int 1
+
+# --- Region & format (date/number/unit conventions). Opt-in: uncomment
+# if you want German-style formatting with an English UI. ---
+# defaults write NSGlobalDomain AppleLocale -string "en_DE"
+# defaults write NSGlobalDomain AppleMetricUnits -bool true
+# defaults write NSGlobalDomain AppleMeasurementUnits -string "Centimeters"
+# defaults write NSGlobalDomain AppleTemperatureUnit -string "Celsius"
+
+# --- Add Persian (Farsi) keyboard layout without removing existing ones.
+# Guarded so re-runs don't append duplicates. May need a logout to fully
+# register; verify in System Settings > Keyboard > Input Sources. ---
+if ! defaults read com.apple.HIToolbox AppleEnabledInputSources 2>/dev/null | grep -q "Persian"; then
+  defaults write com.apple.HIToolbox AppleEnabledInputSources -array-add \
+    '{ "InputSourceKind" = "Keyboard Layout"; "KeyboardLayout Name" = "Persian"; }'
+fi
+
+# --- Caps Lock -> Control, applied globally to any keyboard (current or
+# future, internal or external) via hidutil. Session-only by itself, so
+# we also drop a LaunchAgent below to reapply it on every login. ---
+hidutil property --set '{"UserKeyMapping":[{"HIDKeyboardModifierMappingSrc":0x700000039,"HIDKeyboardModifierMappingDst":0x7000000E0}]}' >/dev/null || true
+
+mkdir -p "$HOME/Library/LaunchAgents"
+cat > "$HOME/Library/LaunchAgents/local.capslock-remap.plist" <<'EOF'
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+  <key>Label</key><string>local.capslock-remap</string>
+  <key>ProgramArguments</key>
+  <array>
+    <string>/usr/bin/hidutil</string>
+    <string>property</string>
+    <string>--set</string>
+    <string>{"UserKeyMapping":[{"HIDKeyboardModifierMappingSrc":0x700000039,"HIDKeyboardModifierMappingDst":0x7000000E0}]}</string>
+  </array>
+  <key>RunAtLoad</key><true/>
+</dict>
+</plist>
+EOF
+launchctl unload "$HOME/Library/LaunchAgents/local.capslock-remap.plist" 2>/dev/null || true
+launchctl load "$HOME/Library/LaunchAgents/local.capslock-remap.plist" 2>/dev/null || true
+
+# --- Apply (best effort). cfprefsd needed for HIToolbox/input-source
+# changes to be picked up; Dock added so Dock-related tweaks take. ---
+killall cfprefsd Finder Dock SystemUIServer 2>/dev/null || true
+
+echo "==> macOS defaults applied (some need logout/restart)"
+{{ end -}}

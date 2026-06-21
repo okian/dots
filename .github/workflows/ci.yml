@@ -1,0 +1,44 @@
+name: CI
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install chezmoi
+        run: |
+          sh -c "$(curl -fsLS get.chezmoi.io)" -- -b "$HOME/.local/bin"
+          echo "$HOME/.local/bin" >> "$GITHUB_PATH"
+
+      - name: Init (prompt defaults)
+        run: |
+          chezmoi --source="$PWD" \
+                  --destination="$RUNNER_TEMP/dest" \
+                  --config="$RUNNER_TEMP/chezmoi.toml" \
+                  --persistent-state="$RUNNER_TEMP/state.boltdb" \
+                  init --promptDefaults
+
+      - name: Template lint (dry-run, no scripts/externals)
+        run: |
+          mkdir -p "$RUNNER_TEMP/dest"
+          chezmoi --source="$PWD" \
+                  --destination="$RUNNER_TEMP/dest" \
+                  --config="$RUNNER_TEMP/chezmoi.toml" \
+                  --persistent-state="$RUNNER_TEMP/state.boltdb" \
+                  apply --dry-run --force --exclude=scripts,externals
+
+      - name: Shellcheck rendered scripts
+        run: |
+          fail=0
+          for f in home/run_*.sh.tmpl; do
+            echo "--- shellcheck: $f ---"
+            chezmoi execute-template --config="$RUNNER_TEMP/chezmoi.toml" \
+                    --source="$PWD" < "$f" \
+              | shellcheck --severity=error --shell=bash - || fail=1
+          done
+          exit "$fail"

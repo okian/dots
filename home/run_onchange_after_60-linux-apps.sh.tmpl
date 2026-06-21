@@ -1,0 +1,22 @@
+#!/usr/bin/env bash
+# Linux-only apps that have no Homebrew/Flatpak path — installed via vendor
+# scripts. On macOS these come from Homebrew casks (see packages.yaml), so this
+# whole script renders empty there.
+set -euo pipefail
+
+{{ if .isLinux -}}
+# --- Ollama -----------------------------------------------------------------
+if ! command -v ollama >/dev/null 2>&1; then
+  echo "==> Installing Ollama"
+  curl -fsSL https://ollama.com/install.sh | sh || true
+fi
+
+# --- Tailscale --------------------------------------------------------------
+if ! command -v tailscale >/dev/null 2>&1; then
+  echo "==> Installing Tailscale"
+  curl -fsSL https://tailscale.com/install.sh | sh || true
+fi
+echo "==> linux-apps done"
+{{ else -}}
+: # nothing to do on this OS
+{{ end -}}

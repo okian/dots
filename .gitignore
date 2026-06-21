@@ -1,0 +1,9 @@
+# chezmoi state / local scratch
+*.swp
+*.swo
+.DS_Store
+
+# Claude Code local permissions (machine-local)
+.claude/settings.local.json
+
+# nothing machine-local should live in this repo

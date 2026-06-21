@@ -1,0 +1,54 @@
+#!/usr/bin/env bash
+# Language toolchains that have first-class version managers (kept out of brew
+# so we always get the proper, updatable toolchain): rust, swift, python.
+# go + node come from Homebrew (see packages.yaml).
+set -euo pipefail
+
+# Ensure brew + cargo on PATH for this script.
+for p in /opt/homebrew/bin/brew /usr/local/bin/brew /home/linuxbrew/.linuxbrew/bin/brew; do
+  [ -x "$p" ] && eval "$("$p" shellenv)" && break
+done
+export PATH="$HOME/.cargo/bin:$HOME/.local/bin:$PATH"
+
+# --- Rust (rustup) ----------------------------------------------------------
+if ! command -v rustup >/dev/null 2>&1; then
+  echo "==> Installing rustup"
+  curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs \
+    | sh -s -- -y --no-modify-path --default-toolchain stable
+  export PATH="$HOME/.cargo/bin:$PATH"
+fi
+echo "==> Configuring rust toolchain"
+rustup default stable
+rustup component add clippy rustfmt rust-analyzer rust-src
+if ! command -v cargo-binstall >/dev/null 2>&1; then
+  curl -L --proto '=https' --tlsv1.2 -sSf \
+    https://raw.githubusercontent.com/cargo-bins/cargo-binstall/main/install-from-binstall-release.sh | bash || true
+fi
+
+# --- Swift (swiftly) --------------------------------------------------------
+if ! command -v swiftly >/dev/null 2>&1; then
+  echo "==> Installing swiftly"
+  tmpd="$(mktemp -d)"
+  {{ if .isMac -}}
+  curl -fsSL "https://download.swift.org/swiftly/darwin/swiftly.pkg" -o "$tmpd/swiftly.pkg"
+  installer -pkg "$tmpd/swiftly.pkg" -target CurrentUserHomeDirectory
+  ~/.swiftly/bin/swiftly init --quiet-shell-followup --assume-yes || ~/.swiftly/bin/swiftly init || true
+  {{ else -}}
+  arch="$(uname -m)"
+  curl -fsSL "https://download.swift.org/swiftly/linux/swiftly-${arch}.tar.gz" -o "$tmpd/swiftly.tar.gz"
+  tar -xzf "$tmpd/swiftly.tar.gz" -C "$tmpd"
+  "$tmpd/swiftly" init --assume-yes --skip-install || true
+  {{ end -}}
+  rm -rf "$tmpd"
+  export PATH="$HOME/.swiftly/bin:$PATH"
+fi
+if command -v swiftly >/dev/null 2>&1; then
+  swiftly install latest --use || true
+fi
+
+# --- Python (uv-managed latest CPython) -------------------------------------
+if command -v uv >/dev/null 2>&1; then
+  echo "==> Installing latest CPython via uv"
+  uv python install || true
+fi
+echo "==> languages done"

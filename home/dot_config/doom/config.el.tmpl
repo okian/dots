@@ -1,0 +1,16 @@
+;;; config.el -*- lexical-binding: t; -*-
+;; Personal Doom config. Managed by chezmoi.
+
+(setq user-full-name {{ .name | quote }}
+      user-mail-address {{ .email | quote }})
+
+(setq doom-font (font-spec :family "JetBrainsMono Nerd Font" :size 14)
+      doom-theme 'doom-one)
+
+(setq display-line-numbers-type 'relative)
+
+;; Use ripgrep/fd if present (installed via brew).
+(setq projectile-project-search-path '("~/projects/"))
+
+(after! lsp-mode
+  (setq lsp-idle-delay 0.5))

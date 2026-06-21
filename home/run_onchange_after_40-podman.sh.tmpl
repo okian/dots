@@ -1,0 +1,26 @@
+#!/usr/bin/env bash
+# Container runtime: Podman (no Docker Desktop).
+set -euo pipefail
+
+for p in /opt/homebrew/bin/brew /usr/local/bin/brew /home/linuxbrew/.linuxbrew/bin/brew; do
+  [ -x "$p" ] && eval "$("$p" shellenv)" && break
+done
+
+command -v podman >/dev/null 2>&1 || { echo "podman not found; skipping"; exit 0; }
+
+{{ if .isMac -}}
+# macOS needs a Linux VM. Create the default machine once, then ensure it runs.
+if ! podman machine inspect podman-machine-default >/dev/null 2>&1; then
+  echo "==> Initializing podman machine"
+  podman machine init
+fi
+echo "==> Ensuring podman machine is running"
+podman machine start 2>/dev/null || true   # no-op if already running
+{{ else -}}
+# Linux: enable the rootless user socket (docker-compatible API).
+if command -v systemctl >/dev/null 2>&1 && systemctl --user >/dev/null 2>&1; then
+  echo "==> Enabling rootless podman socket"
+  systemctl --user enable --now podman.socket || true
+fi
+{{ end -}}
+echo "==> podman done"

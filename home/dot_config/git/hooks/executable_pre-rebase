@@ -1,0 +1,38 @@
+#!/usr/bin/env bash
+# Global pre-rebase: refuse to rebase protected branches or already-published
+# history (commits that exist on a remote), as a safety net.
+# Bypass: HOOKS_ALLOW_REBASE=1 | git config hooks.allowRebasePublished true | HOOKS_DISABLE=1
+_HOOK_TAG="pre-rebase"
+HOOK_DIR="$(cd "$(dirname "$0")" && pwd)"
+# shellcheck source=lib/common.sh
+. "$HOOK_DIR/lib/common.sh"
+
+hooks_disabled && exit 0
+cfg_bool rebaseProtectPublished true || exit 0
+[ "${HOOKS_ALLOW_REBASE:-}" = 1 ] && exit 0
+cfg_bool allowRebasePublished false && exit 0
+
+# Args: <upstream> [branch].  No branch => rebasing the current branch.
+# ($1 = upstream, not needed: we gate on the branch being published, not the base.)
+branch="${2:-$(current_branch)}"
+[ -z "$branch" ] && exit 0 # detached HEAD: let git proceed
+
+# Never rebase a protected branch.
+if is_protected "$branch"; then
+  hook_err "refusing to rebase protected branch '$branch'"
+  hook_hint "override: HOOKS_ALLOW_REBASE=1 git rebase ..."
+  exit 1
+fi
+
+# Published? If the branch tip is contained in any remote-tracking branch,
+# rebasing would rewrite history others may have.
+tip=$(git rev-parse --verify --quiet "$branch" 2>/dev/null)
+if [ -n "$tip" ] && git branch -r --contains "$tip" 2>/dev/null | grep -q '[^[:space:]]'; then
+  remotes=$(git branch -r --contains "$tip" 2>/dev/null | tr -d ' ' | paste -sd, -)
+  hook_err "branch '$branch' is published (on remote: ${remotes:-unknown})"
+  hook_hint "rebasing rewrites shared history; prefer 'git merge' or a new branch"
+  hook_hint "override: HOOKS_ALLOW_REBASE=1 git rebase ...  (or git config hooks.allowRebasePublished true)"
+  exit 1
+fi
+
+exit 0

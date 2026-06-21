@@ -1,0 +1,36 @@
+#!/usr/bin/env bash
+# Bootstrap editor configs: LazyVim plugins + Doom Emacs.
+set -euo pipefail
+
+for p in /opt/homebrew/bin/brew /usr/local/bin/brew /home/linuxbrew/.linuxbrew/bin/brew; do
+  [ -x "$p" ] && eval "$("$p" shellenv)" && break
+done
+
+# --- Neovim / LazyVim -------------------------------------------------------
+if command -v nvim >/dev/null 2>&1; then
+  echo "==> Syncing LazyVim plugins (headless)"
+  nvim --headless "+Lazy! sync" +qa 2>/dev/null || true
+fi
+
+# --- Doom Emacs -------------------------------------------------------------
+# The framework itself is cloned to ~/.config/emacs by .chezmoiexternal.toml;
+# our config lives in ~/.config/doom. `doom sync` reconciles the two.
+DOOM_BIN="$HOME/.config/emacs/bin/doom"
+if [ -x "$DOOM_BIN" ] && command -v emacs >/dev/null 2>&1; then
+  echo "==> doom sync"
+  if [ ! -f "$HOME/.config/emacs/.local/etc/@/init.el" ]; then
+    "$DOOM_BIN" install --no-config --no-fonts --force || true
+  fi
+  "$DOOM_BIN" sync || true
+fi
+# --- tmux plugins (tpm cloned via .chezmoiexternal.toml) --------------------
+if [ -x "$HOME/.tmux/plugins/tpm/bin/install_plugins" ]; then
+  echo "==> Installing tmux plugins"
+  "$HOME/.tmux/plugins/tpm/bin/install_plugins" || true
+fi
+
+# --- git-lfs global filters (global hooks suggest LFS for large files) ------
+if command -v git-lfs >/dev/null 2>&1; then
+  git lfs install --skip-repo >/dev/null 2>&1 || true
+fi
+echo "==> editors done"

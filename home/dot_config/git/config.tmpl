@@ -1,0 +1,54 @@
+[user]
+	name = {{ .name | quote }}
+	email = {{ .email | quote }}
+{{- if .signWithSsh }}
+	signingkey = ~/.ssh/id_ed25519.pub
+[gpg]
+	format = ssh
+[commit]
+	gpgsign = true
+{{- end }}
+
+[init]
+	defaultBranch = main
+
+[core]
+	editor = nvim
+	pager = delta
+	autocrlf = input
+	excludesfile = ~/.config/git/ignore
+	# Global hooks for every repo (new + cloned). Absolute path: git does not
+	# reliably expand ~ here. Repos using husky/pre-commit set their own
+	# local core.hooksPath, which transparently overrides this.
+	hooksPath = {{ .chezmoi.homeDir }}/.config/git/hooks
+
+[commit]
+	template = ~/.config/git/commit-template
+
+[interactive]
+	diffFilter = delta --color-only
+
+[delta]
+	navigate = true
+	line-numbers = true
+	side-by-side = true
+
+[merge]
+	conflictstyle = zdiff3
+[diff]
+	colorMoved = default
+[pull]
+	rebase = true
+[push]
+	autoSetupRemote = true
+[rebase]
+	autoStash = true
+[fetch]
+	prune = true
+
+[alias]
+	st = status -sb
+	co = checkout
+	br = branch
+	lg = log --graph --oneline --decorate --all
+	last = log -1 HEAD --stat

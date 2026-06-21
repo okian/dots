@@ -1,0 +1,9 @@
+
+
+# <type>(<scope>): <subject>   (≤50 chars, imperative: "add", not "added")
+#
+# Body: what & why (wrap ~72). Blank line above.
+#
+# Footer: "Refs #123" / "Closes #123" / "BREAKING CHANGE: ..."
+#
+# type: feat fix docs style refactor perf test build ci chore revert

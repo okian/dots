@@ -1,0 +1,27 @@
+#!/usr/bin/env bash
+# Make nushell the default login shell (zsh stays installed as fallback).
+set -euo pipefail
+
+for p in /opt/homebrew/bin/brew /usr/local/bin/brew /home/linuxbrew/.linuxbrew/bin/brew; do
+  [ -x "$p" ] && eval "$("$p" shellenv)" && break
+done
+
+NU="$(command -v nu || true)"
+[ -z "$NU" ] && { echo "nushell not found; skipping chsh"; exit 0; }
+
+SUDO=""
+if [ "$(id -u)" -ne 0 ]; then SUDO="sudo"; fi
+
+# Register nu in /etc/shells.
+if ! grep -qxF "$NU" /etc/shells 2>/dev/null; then
+  echo "==> Adding $NU to /etc/shells"
+  echo "$NU" | $SUDO tee -a /etc/shells >/dev/null
+fi
+
+# Switch the login shell if it isn't already nu.
+current="$(getent passwd "$USER" 2>/dev/null | cut -d: -f7 || dscl . -read "/Users/$USER" UserShell 2>/dev/null | awk '{print $2}')"
+if [ "$current" != "$NU" ]; then
+  echo "==> Setting default shell to nushell"
+  chsh -s "$NU" || echo "    chsh failed (may need a password). Run: chsh -s $NU"
+fi
+echo "==> default-shell done"

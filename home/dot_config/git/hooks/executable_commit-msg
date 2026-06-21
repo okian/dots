@@ -1,0 +1,72 @@
+#!/usr/bin/env bash
+# Global commit-msg: require a ticket key (e.g. ROG-22827) and/or Conventional
+# Commits, enforce subject length. Skips merges/reverts/fixup/squash.
+# Bypass: git commit --no-verify   |   HOOKS_DISABLE=1
+_HOOK_TAG="commit-msg"
+HOOK_DIR="$(cd "$(dirname "$0")" && pwd)"
+# shellcheck source=lib/common.sh
+. "$HOOK_DIR/lib/common.sh"
+
+hooks_disabled && exit 0
+
+msg_file="$1"
+[ -n "$msg_file" ] && [ -f "$msg_file" ] || exit 0
+
+# Strip comment lines and everything after git's verbose scissors marker.
+content=$(sed -e '/^[[:space:]]*#/d' \
+              -e '/^# -\+ >8 -\+$/,$d' "$msg_file")
+# First non-blank line = subject.
+subject=$(printf '%s\n' "$content" | sed '/^[[:space:]]*$/d' | head -n1)
+
+# --- Exemptions: auto-generated / special commits ---------------------------
+if merge_in_progress; then exit 0; fi
+case "$subject" in
+  "Merge "* | "Revert "* | "Reapply "* | \
+  "fixup! "* | "squash! "* | "amend! "*)
+    exit 0 ;;
+esac
+
+if [ -z "$subject" ]; then
+  hook_err "empty commit message"
+  exit 1
+fi
+
+fail=0
+
+# --- Subject length ---------------------------------------------------------
+maxlen=$(cfg subjectMaxLen "$HOOKS_SUBJECT_MAX_LEN")
+if [ "${#subject}" -gt "$maxlen" ]; then
+  hook_err "subject too long: ${#subject} > ${maxlen} chars"
+  hook_hint "$subject"
+  fail=1
+fi
+
+# --- Ticket key requirement (default on) ------------------------------------
+if cfg_bool ticketRequired true; then
+  pat=$(cfg ticketPattern "$HOOKS_TICKET_PATTERN")
+  scope=$(cfg ticketScope subject) # subject | message
+  haystack="$subject"
+  [ "$scope" = message ] && haystack="$content"
+  if ! printf '%s' "$haystack" | grep -Eq "$pat"; then
+    hook_err "commit message must reference a ticket (pattern: $pat)"
+    hook_hint "e.g.  ROG-22827: fix token refresh   |   feat(auth): refresh token (ROG-22827)"
+    hook_hint "disable: git config hooks.ticketRequired false"
+    fail=1
+  fi
+fi
+
+# --- Conventional Commits (optional) ----------------------------------------
+if cfg_bool conventional false; then
+  cc='^(feat|fix|docs|style|refactor|perf|test|build|ci|chore|revert)(\([a-z0-9._/-]+\))?!?: .+'
+  if ! printf '%s' "$subject" | grep -Eq "$cc"; then
+    hook_err "subject must follow Conventional Commits: type(scope): description"
+    hook_hint "types: feat fix docs style refactor perf test build ci chore revert"
+    fail=1
+  fi
+fi
+
+# --- Chain to repo-local / husky commit-msg ---------------------------------
+run_local_hook commit-msg "$@" || fail=1
+
+[ "$fail" -ne 0 ] && exit 1
+exit 0

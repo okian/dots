@@ -1,0 +1,16 @@
+{{- /* Keep platform-specific files off the wrong OS. */ -}}
+README.md
+
+{{ if ne .chezmoi.os "darwin" }}
+# macOS-only configs
+Library/
+{{ end }}
+
+{{- /* Secrets gate: if the age key is absent, skip every encrypted secret. */ -}}
+{{- /* Checked live on each apply, so adding the key later "just works".    */ -}}
+{{ if not (stat (joinPath .chezmoi.homeDir ".config" "chezmoi" "key.txt")) }}
+# No decryption key on this machine -> ignore all secrets entirely.
+.secrets
+.ssh/id_*
+!.ssh/id_*.pub
+{{ end }}

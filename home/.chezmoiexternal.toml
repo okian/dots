@@ -1,0 +1,20 @@
+{{- /* External repos chezmoi keeps in sync (refreshed per refreshPeriod). */ -}}
+
+# Doom Emacs framework -> ~/.config/emacs. `doom sync` (run_onchange_after_30)
+# turns it into a working install from the dot_config/doom/ files.
+[".config/emacs"]
+    type = "git-repo"
+    url = "https://github.com/doomemacs/doomemacs.git"
+    refreshPeriod = "168h"
+    [".config/emacs".clone]
+        args = ["--depth=1"]
+    [".config/emacs".pull]
+        args = ["--ff-only"]
+
+# tmux plugin manager
+[".tmux/plugins/tpm"]
+    type = "git-repo"
+    url = "https://github.com/tmux-plugins/tpm.git"
+    refreshPeriod = "168h"
+    [".tmux/plugins/tpm".clone]
+        args = ["--depth=1"]

@@ -1,0 +1,20 @@
+#!/usr/bin/env bash
+# Global post-merge: after a merge/pull, remind (or auto-run) when dependency
+# manifests changed. Never blocks.
+_HOOK_TAG="post-merge"
+HOOK_DIR="$(cd "$(dirname "$0")" && pwd)"
+# shellcheck source=lib/common.sh
+. "$HOOK_DIR/lib/common.sh"
+# shellcheck source=lib/languages.sh
+. "$HOOK_DIR/lib/languages.sh"
+
+hooks_disabled && exit 0
+cfg_bool depsReminder true || exit 0
+
+# Compare the pre-merge state (ORIG_HEAD) to the result (HEAD).
+prev=$(git rev-parse --verify --quiet ORIG_HEAD 2>/dev/null)
+[ -z "$prev" ] && prev=$(git rev-parse --verify --quiet 'HEAD@{1}' 2>/dev/null)
+[ -z "$prev" ] && exit 0
+
+deps_reminder "$prev" HEAD
+exit 0

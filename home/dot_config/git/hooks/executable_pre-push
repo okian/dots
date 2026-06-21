@@ -1,0 +1,71 @@
+#!/usr/bin/env bash
+# Global pre-push: block force/non-ff (and optionally any) pushes to protected
+# branches; run lint + the fast test suite for detected languages.
+# Bypass: git push --no-verify | HOOKS_DISABLE=1 | HOOKS_SKIP_TESTS=1
+_HOOK_TAG="pre-push"
+HOOK_DIR="$(cd "$(dirname "$0")" && pwd)"
+# shellcheck source=lib/common.sh
+. "$HOOK_DIR/lib/common.sh"
+# shellcheck source=lib/languages.sh
+. "$HOOK_DIR/lib/languages.sh"
+
+hooks_disabled && exit 0
+
+# remote_name="$1"; remote_url="$2"  (unused but documented)
+fail=0
+have_real_update=0
+
+# stdin: <local_ref> <local_sha> <remote_ref> <remote_sha>  per ref
+while read -r local_ref local_sha remote_ref remote_sha; do
+  [ -z "${local_ref:-}" ] && continue
+  # Deleting a remote ref (local_sha all zeros): skip checks for it.
+  if is_zero_sha "$local_sha"; then continue; fi
+  have_real_update=1
+
+  rbranch="${remote_ref#refs/heads/}"
+  [ "$rbranch" = "$remote_ref" ] && continue # not a branch (tag, note, etc.)
+
+  if is_protected "$rbranch"; then
+    # Block ALL pushes to protected, if policy says so.
+    if cfg_bool blockPushToProtected false \
+       && [ "${HOOKS_ALLOW_PROTECTED:-}" != 1 ]; then
+      hook_err "push to protected branch '$rbranch' is blocked by policy"
+      hook_hint "open a PR instead; override: HOOKS_ALLOW_PROTECTED=1 git push ..."
+      fail=1
+      continue
+    fi
+    # Always block force / non-fast-forward to protected (rewrites shared history).
+    if ! is_zero_sha "$remote_sha" \
+       && ! git merge-base --is-ancestor "$remote_sha" "$local_sha" 2>/dev/null; then
+      if ! cfg_bool allowProtectedForce false \
+         && [ "${HOOKS_ALLOW_PROTECTED:-}" != 1 ]; then
+        hook_err "non-fast-forward (force) push to protected '$rbranch' is blocked"
+        hook_hint "this rewrites shared history; override: HOOKS_ALLOW_PROTECTED=1 git push ..."
+        fail=1
+      fi
+    fi
+  fi
+done
+
+# Protected-branch violations are fatal regardless of test settings.
+[ "$fail" -ne 0 ] && exit 1
+
+# --- Lint + fast tests (only when actually pushing commits) -----------------
+if [ "$have_real_update" = 1 ] \
+   && cfg_bool runTestsOnPush true \
+   && [ "${HOOKS_SKIP_TESTS:-}" != 1 ]; then
+  langs=$(detect_langs)
+  if [ -n "$langs" ]; then
+    for l in $langs; do lang_lint "$l" || fail=1; done
+    for l in $langs; do lang_test "$l" || fail=1; done
+  fi
+fi
+
+run_local_hook pre-push "$@" || fail=1
+
+if [ "$fail" -ne 0 ]; then
+  hook_err "pre-push checks failed — fix the above, or bypass with: git push --no-verify"
+  hook_hint "skip just the tests: HOOKS_SKIP_TESTS=1 git push ..."
+  exit 1
+fi
+exit 0
