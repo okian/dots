@@ -16,9 +16,9 @@ encryption = "age"
 
 [age]
     identity = {{ $keyPath | quote }}
-    # PUBLIC recipient key — safe to commit. Run `essentials secrets-setup` to
-    # generate a keypair, then paste the printed public key here and commit.
-    recipient = "age1REPLACE_WITH_YOUR_PUBLIC_KEY"
+    # PUBLIC recipient key — safe to commit. Secrets are encrypted to this; the
+    # matching private key lives at ~/.config/chezmoi/key.txt (never committed).
+    recipient = "age10zpg6kxcu7dvtkknxv0e7nqxl5jkvzg34wszmzafl9c5h2j2lf2sf9t4e3"
 
 [data]
     name = {{ $name | quote }}
