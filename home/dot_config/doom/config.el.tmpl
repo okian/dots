@@ -4,12 +4,31 @@
 (setq user-full-name {{ .name | quote }}
       user-mail-address {{ .email | quote }})
 
-(setq doom-font (font-spec :family "JetBrainsMono Nerd Font" :size 14)
-      doom-theme 'doom-one)
+;; ── Fonts ────────────────────────────────────────────────────────────────
+;; JetBrainsMono Nerd Font (installed by provisioning, both OSes).
+(setq doom-font     (font-spec :family "JetBrainsMono Nerd Font" :size 14)
+      doom-big-font (font-spec :family "JetBrainsMono Nerd Font" :size 20))
+(setq-default line-spacing 0.1)
 
+;; ── Theme: Catppuccin Mocha ────────────────────────────────────────────────
+;; Matches WezTerm / nushell / FZF / tmux / Neovim. catppuccin-flavor must be
+;; set before the theme loads (Doom loads doom-theme after this file).
+(setq catppuccin-flavor 'mocha
+      doom-theme 'catppuccin)
+
+;; Subtle frame transparency to echo the WezTerm window (opacity 0.97).
+;; Ignored gracefully on builds without alpha-background support.
+(add-to-list 'default-frame-alist '(alpha-background . 97))
+
+;; ── Editor UX ───────────────────────────────────────────────────────────────
 (setq display-line-numbers-type 'relative)
+(setq which-key-idle-delay 0.4)
 
-;; Use ripgrep/fd if present (installed via brew).
+;; Quieter modeline: drop the encoding/EOL indicator clutter.
+(after! doom-modeline
+  (setq doom-modeline-buffer-encoding nil))
+
+;; ── Projects ────────────────────────────────────────────────────────────────
 (setq projectile-project-search-path '("~/projects/"))
 
 (after! lsp-mode
