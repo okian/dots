@@ -37,7 +37,9 @@ Filenames encode the target path and attributes; the rendered result is what lan
 ## Single sources of truth
 
 - **`home/.chezmoidata/packages.yaml`** — every package installed via a package manager.
-  `brew_formulae` (CLI, both OSes), `brew_casks` (macOS GUI only), `linux_apt`, `linux_flatpak`.
+  `brew_formulae` (CLI, both OSes), `brew_casks` (macOS GUI only), `brew_taps` + `mac_brew_formulae`
+  (macOS-only taps/formulae, e.g. the `d12frosted/emacs-plus` tap + `emacs-plus@30`), `linux_apt`,
+  `linux_flatpak`.
   Languages with version managers (rust→rustup, swift→swiftly, python→uv) are deliberately
   NOT here — they live in `run_onchange_after_20-languages`. Per-language dev tools live here
   too as `go_tools`/`cargo_tools`/`python_tools`/`node_globals`; that same script installs them

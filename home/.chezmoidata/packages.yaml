@@ -21,6 +21,10 @@
 # python envs→uv) are intentionally NOT listed here; see run_onchange_after_20.
 
 packages:
+  # Extra Homebrew taps (macOS only — see Brewfile in run_onchange_before_10).
+  brew_taps:
+    - d12frosted/emacs-plus   # emacs-plus@30 (native-comp + HarfBuzz Emacs)
+
   brew_formulae:
     # chezmoi itself (so it self-updates & stays on PATH)
     - chezmoi
@@ -36,8 +40,9 @@ packages:
     - atuin
     # editors
     - neovim
-    # (GUI Emacs is installed per-OS: brew cask emacs-app on macOS,
-    #  apt emacs on Linux — both ship the emacs/emacsclient CLI Doom needs.)
+    # (GUI Emacs is per-OS: emacs-plus@30 on macOS — see mac_brew_formulae,
+    #  built with native-comp + HarfBuzz so Doom ligatures work — and apt emacs
+    #  on Linux. Both ship the emacs/emacsclient CLI Doom needs.)
     # fuzzy finding + navigation
     - fzf
     - zoxide
@@ -122,8 +127,7 @@ packages:
     # (JetBrainsMono Nerd Font is installed by run_onchange_before_10-packages
     #  via direct download on BOTH OSes — not a cask. Casks "adopt" pre-existing
     #  font files and abort when checksums differ; the direct unzip overwrites.)
-    # editors / terminals
-    - emacs-app     # GUI Emacs.app (also symlinks emacs/emacsclient onto PATH)
+    # editors / terminals (Emacs is emacs-plus@30 in mac_brew_formulae, not a cask)
     - zed
     - alacritty
     # ai / containers
@@ -134,6 +138,13 @@ packages:
     - tailscale
     - discord
     - iina
+
+  # macOS-only Homebrew *formulae* (not casks). emacs-plus builds Emacs.app with
+  # native-compilation + HarfBuzz (HarfBuzz is what Doom's ligatures need); the
+  # resulting Emacs.app is symlinked into ~/Applications by the installer script.
+  # Note: compiles from source on first install (~15-30 min).
+  mac_brew_formulae:
+    - emacs-plus@30
 
   # Linux desktop extras (only used when a GUI session is present).
   linux_apt:

@@ -23,17 +23,45 @@ elif [ -x /home/linuxbrew/.linuxbrew/bin/brew ]; then
   eval "$(/home/linuxbrew/.linuxbrew/bin/brew shellenv)"
 fi
 
+{{ if .isMac -}}
+# One-time migration: drop the old emacs-app cask (precompiled, no HarfBuzz /
+# native-comp) so emacs-plus@30 can own the `emacs` symlink without a clash.
+if brew list --cask emacs-app >/dev/null 2>&1; then
+  echo "==> removing emacs-app cask (superseded by emacs-plus@30)"
+  brew uninstall --cask emacs-app || true
+fi
+{{ end -}}
+
 echo "==> brew bundle"
 brew bundle --file=/dev/stdin <<'BREWFILE'
 {{ range .packages.brew_formulae -}}
 brew "{{ . }}"
 {{ end -}}
 {{ if .isMac -}}
+{{ range .packages.brew_taps -}}
+tap "{{ . }}"
+{{ end -}}
+{{ range .packages.mac_brew_formulae -}}
+brew "{{ . }}"
+{{ end -}}
 {{ range .packages.brew_casks -}}
 cask "{{ . }}"
 {{ end -}}
 {{ end -}}
 BREWFILE
+
+{{ if .isMac -}}
+# emacs-plus installs Emacs.app under the Cellar; link it where Spotlight,
+# Finder, and `open -a Emacs` look (~/Applications is user-writable, no sudo).
+if brew list --formula emacs-plus@30 >/dev/null 2>&1; then
+  emacs_app="$(brew --prefix)/opt/emacs-plus@30/Emacs.app"
+  if [ -d "$emacs_app" ]; then
+    mkdir -p "$HOME/Applications"
+    ln -sfn "$emacs_app" "$HOME/Applications/Emacs.app"
+    echo "==> linked Emacs.app -> $emacs_app"
+  fi
+fi
+{{ end -}}
 
 {{ if .isLinux -}}
 # --- Linux GUI extras (best effort; only meaningful on a desktop) -----------
@@ -48,29 +76,39 @@ if command -v flatpak >/dev/null 2>&1; then
 fi
 {{ end -}}
 
-# --- JetBrainsMono Nerd Font (both OSes; direct from nerd-fonts releases) ----
-# Patched Nerd Font (icons/glyphs) used by the WezTerm tab bar, starship, yazi.
-# Direct unzip rather than a brew cask: casks try to "adopt" pre-existing font
-# files and abort when checksums differ; `cp -f` just overwrites.
+# --- Nerd Fonts (both OSes; direct from nerd-fonts releases) ----------------
+# JetBrainsMono for the terminal/editor; Symbols-only for Doom Emacs / nerd-icons
+# (doom doctor wants the "Symbols Nerd Font Mono" family). Direct unzip rather
+# than a brew cask: casks "adopt" pre-existing font files and abort on checksum
+# mismatch; `cp -f` just overwrites.
 {{ if .isMac -}}
 fontdir="$HOME/Library/Fonts"
 {{ else -}}
 fontdir="$HOME/.local/share/fonts"
 {{ end -}}
-if ! compgen -G "$fontdir/JetBrainsMono*NerdFont*" >/dev/null; then
-  echo "==> Installing JetBrainsMono Nerd Font"
+mkdir -p "$fontdir"
+
+# install_nerd_font <release-zip> <glob-that-proves-it-is-already-installed>
+install_nerd_font() {
+  local zip="$1" probe="$2" tmpd
+  if compgen -G "$fontdir/$probe" >/dev/null; then return; fi
+  echo "==> Installing Nerd Font: $zip"
   tmpd="$(mktemp -d)"
-  if curl -fsSL -o "$tmpd/JBM.zip" \
-      https://github.com/ryanoasis/nerd-fonts/releases/latest/download/JetBrainsMono.zip; then
-    mkdir -p "$fontdir" "$tmpd/JBM"
-    unzip -oq "$tmpd/JBM.zip" -d "$tmpd/JBM"
-    cp -f "$tmpd/JBM"/*.ttf "$fontdir"/ 2>/dev/null || true
-{{ if .isLinux -}}
-    if command -v fc-cache >/dev/null 2>&1; then
-      fc-cache -f "$fontdir" >/dev/null 2>&1 || true
-    fi
-{{ end -}}
+  if curl -fsSL -o "$tmpd/f.zip" \
+      "https://github.com/ryanoasis/nerd-fonts/releases/latest/download/$zip"; then
+    mkdir -p "$tmpd/x"
+    unzip -oq "$tmpd/f.zip" -d "$tmpd/x"
+    cp -f "$tmpd/x"/*.ttf "$fontdir"/ 2>/dev/null || true
+    cp -f "$tmpd/x"/*.otf "$fontdir"/ 2>/dev/null || true
   fi
   rm -rf "$tmpd"
+}
+
+install_nerd_font "JetBrainsMono.zip"        "JetBrainsMono*NerdFont*"
+install_nerd_font "NerdFontsSymbolsOnly.zip" "SymbolsNerdFont*"
+{{ if .isLinux -}}
+if command -v fc-cache >/dev/null 2>&1; then
+  fc-cache -f "$fontdir" >/dev/null 2>&1 || true
 fi
+{{ end -}}
 echo "==> packages done"
