@@ -74,9 +74,15 @@ if brew list --formula emacs-plus@30 >/dev/null 2>&1; then
   brew link --overwrite emacs-plus@30 >/dev/null 2>&1 || true
   emacs_app="$(brew --prefix)/opt/emacs-plus@30/Emacs.app"
   if [ -d "$emacs_app" ]; then
-    mkdir -p "$HOME/Applications"
-    ln -sfn "$emacs_app" "$HOME/Applications/Emacs.app"
-    echo "==> linked Emacs.app -> $emacs_app"
+    # Prefer /Applications (where Finder/Spotlight/Launchpad look); fall back to
+    # ~/Applications only if /Applications isn't writable (non-admin user).
+    if ln -sfn "$emacs_app" /Applications/Emacs.app 2>/dev/null; then
+      echo "==> linked Emacs.app -> /Applications/Emacs.app"
+    else
+      mkdir -p "$HOME/Applications"
+      ln -sfn "$emacs_app" "$HOME/Applications/Emacs.app"
+      echo "==> linked Emacs.app -> ~/Applications/Emacs.app"
+    fi
   fi
 fi
 {{ end -}}
