@@ -50,13 +50,15 @@ def --env fcd [] {
   if ($dir | is-not-empty) { cd $dir }
 }
 
-# `y` opens yazi and cd's to wherever you quit it (official wrapper).
+# `y` opens yazi and cd's to wherever you quit it. Hardened over the official
+# wrapper: `try` around yazi so the temp file is always cleaned up, and the
+# path is trimmed before the comparison.
 def --env y [...args] {
   let tmp = (mktemp -t "yazi-cwd.XXXXX")
-  ^yazi ...$args --cwd-file $tmp
-  let cwd = (open $tmp)
-  if $cwd != "" and $cwd != $env.PWD { cd $cwd }
+  try { ^yazi ...$args --cwd-file $tmp }
+  let cwd = (open $tmp | str trim)
   rm -fp $tmp
+  if $cwd != "" and $cwd != $env.PWD { cd $cwd }
 }
 
 # starship / zoxide / carapace / atuin are auto-sourced from the vendor autoload

@@ -41,12 +41,18 @@ fi
 ff() { local f; f=$(fd --type f --hidden --follow --exclude .git | fzf --preview 'bat --color=always --style=numbers {} 2>/dev/null'); [ -n "$f" ] && ${EDITOR:-nvim} "$f"; }
 # Fuzzy-find a directory and cd into it.
 fcd() { local d; d=$(fd --type d --hidden --follow --exclude .git | fzf --preview 'eza --tree --level=2 --color=always {}'); [ -n "$d" ] && cd "$d"; }
-# `y` opens yazi and cd's to wherever you quit it (official wrapper; `command cat` dodges the bat alias).
+# `y` opens yazi and cd's to wherever you quit it (`command cat` dodges the bat
+# alias; preserves yazi/cd exit status and always removes the temp file).
 y() {
-  local tmp cwd; tmp="$(mktemp -t yazi-cwd.XXXXXX)"
+  local tmp cwd status
+  tmp="$(mktemp -t yazi-cwd.XXXXXX)" || return
   yazi "$@" --cwd-file="$tmp"
-  if cwd="$(command cat -- "$tmp")" && [ -n "$cwd" ] && [ "$cwd" != "$PWD" ]; then cd -- "$cwd"; fi
+  status=$?
+  if cwd="$(command cat -- "$tmp")" && [ -n "$cwd" ] && [ "$cwd" != "$PWD" ]; then
+    cd -- "$cwd" || status=$?
+  fi
   rm -f -- "$tmp"
+  return "$status"
 }
 
 # Aliases
