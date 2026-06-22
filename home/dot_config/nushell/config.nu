@@ -185,9 +185,9 @@ def gcap [message: string] {
 # starship / zoxide / carapace / atuin are auto-sourced from the vendor autoload
 # dir populated by env.nu — no manual `source` needed here.
 
-# `essentials` commands (update, secrets, hooks, tips, cheatsheet).
-source ~/.config/nushell/essentials.nu
+# `dots` commands (update, secrets, hooks, tips, cheatsheet).
+source ~/.config/nushell/dots.nu
 
-# Random usage tip on interactive startup only (opt out with $env.ESSENTIALS_NO_TIPS).
+# Random usage tip on interactive startup only (opt out with $env.DOTS_NO_TIPS).
 # Guarded by is-interactive so `nu -c ...` scripts stay clean.
-if $nu.is-interactive and ('ESSENTIALS_NO_TIPS' not-in $env) { essentials tip }
+if $nu.is-interactive and ('DOTS_NO_TIPS' not-in $env) { dots tip }

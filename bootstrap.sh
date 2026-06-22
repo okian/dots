@@ -1,14 +1,14 @@
 #!/bin/sh
-# essentials bootstrap — installs chezmoi and applies this repo.
+# dots bootstrap — installs chezmoi and applies this repo.
 #
 # Usage (from a fresh machine):
-#   sh -c "$(curl -fsLS get.chezmoi.io)" -- init --apply github.com/okian/essentials
+#   sh -c "$(curl -fsLS get.chezmoi.io)" -- init --apply github.com/okian/dots
 #
 # Or, if you've cloned the repo locally:
 #   ./bootstrap.sh
 set -eu
 
-REPO="${ESSENTIALS_REPO:-github.com/okian/essentials}"
+REPO="${DOTS_REPO:-github.com/okian/dots}"
 
 # Ensure curl exists (Linux minimal images sometimes lack it).
 if ! command -v curl >/dev/null 2>&1; then

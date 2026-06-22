@@ -1,30 +1,30 @@
-# essentials — cheatsheet
+# dots — cheatsheet
 
 Quick reference for the aliases, commands, and keybindings this setup ships.
-View anytime with `essentials cheatsheet` (nushell) or `cheatsheet` (zsh).
+View anytime with `dots cheatsheet` (nushell) or `cheatsheet` (zsh).
 
 > Shells: **nushell** is your default (vi edit mode); **zsh** is the fallback.
 > Most things below work in both; differences are noted.
 
 ## Managing this setup — one command
 
-`essentials` wraps chezmoi + git so you never call them directly. Run bare
-`essentials` for the full menu. Mental model: **edit → diff → apply** locally;
+`dots` wraps chezmoi + git so you never call them directly. Run bare
+`dots` for the full menu. Mental model: **edit → diff → apply** locally;
 **pull ↓ / save ↑** with the remote.
 
 | Command | What it does |
 |---------|--------------|
-| `essentials edit <file>` | edit a managed file, then apply it |
-| `essentials diff` | preview pending changes to your home dir |
-| `essentials apply` | apply your local edits |
-| `essentials add <p>` | start managing a file (`--encrypt` for secrets) |
-| `essentials show <file>` | show a file's fully rendered content |
-| `essentials pull` | get latest from the remote and apply (↓) |
-| `essentials save [msg]` | stage everything, commit & push (↑) |
-| `essentials status` | uncommitted changes + pending apply |
-| `essentials update` | pull + apply + upgrade **every** toolchain |
-| `essentials cd` | jump into the dotfiles source dir |
-| `essentials managed` / `doctor` / `log` | list managed files / diagnose / history |
+| `dots edit <file>` | edit a managed file, then apply it |
+| `dots diff` | preview pending changes to your home dir |
+| `dots apply` | apply your local edits |
+| `dots add <p>` | start managing a file (`--encrypt` for secrets) |
+| `dots show <file>` | show a file's fully rendered content |
+| `dots pull` | get latest from the remote and apply (↓) |
+| `dots save [msg]` | stage everything, commit & push (↑) |
+| `dots status` | uncommitted changes + pending apply |
+| `dots update` | pull + apply + upgrade **every** toolchain |
+| `dots cd` | jump into the dotfiles source dir |
+| `dots managed` / `doctor` / `log` | list managed files / diagnose / history |
 
 ## Aliases
 
@@ -53,12 +53,12 @@ View anytime with `essentials cheatsheet` (nushell) or `cheatsheet` (zsh).
 | `gcap "msg"` | git add -A → commit → push, in one shot |
 | `y` | open yazi; cd's to wherever you quit it |
 | `z <dir>` | jump to a frecent directory (zoxide); `zi` = interactive |
-| `essentials update` | upgrade configs + all toolchains to latest |
-| `essentials tip` / `tips` | random / all usage tips |
-| `essentials cheatsheet` | open this file |
-| `essentials hooks status` | global git-hooks state; `enable`/`disable`/`test` |
-| `essentials secret-add <p>` | encrypt a file & stage it into the repo |
-| `essentials git-identity …` | per-entity git identities (see below) |
+| `dots update` | upgrade configs + all toolchains to latest |
+| `dots tip` / `tips` | random / all usage tips |
+| `dots cheatsheet` | open this file |
+| `dots hooks status` | global git-hooks state; `enable`/`disable`/`test` |
+| `dots secret-add <p>` | encrypt a file & stage it into the repo |
+| `dots git-identity …` | per-entity git identities (see below) |
 
 ## Per-entity git identities (`~/repos/<entity>/`)
 
@@ -69,10 +69,10 @@ with its own git name/email/signing key. Any repo cloned under
 
 | Command | What it does |
 |---------|--------------|
-| `essentials git-identity add <entity> <email> [name]` | create the identity, make `~/repos/<entity>/`, then **encrypt + commit + push** |
-| `essentials git-identity edit <entity>` | edit in `$EDITOR`; if changed, **re-encrypt + commit + push** |
-| `essentials git-identity list` | show each entity's resolved name/email + whether its dir exists |
-| `essentials git-identity sync` | regenerate the `includeIf` blocks from `~/repos` |
+| `dots git-identity add <entity> <email> [name]` | create the identity, make `~/repos/<entity>/`, then **encrypt + commit + push** |
+| `dots git-identity edit <entity>` | edit in `$EDITOR`; if changed, **re-encrypt + commit + push** |
+| `dots git-identity list` | show each entity's resolved name/email + whether its dir exists |
+| `dots git-identity sync` | regenerate the `includeIf` blocks from `~/repos` |
 
 `add`/`edit` are fully automated — one command writes the identity, encrypts it
 into the repo, asserts the ciphertext leaks no plaintext (aborts otherwise),
@@ -165,7 +165,7 @@ The unfocused pane dims automatically. tmux still works inside WezTerm
 | structural diff | `difftastic` | `git dft` |
 | auto-fixup commits | `git-absorb` | `git absorb` |
 | containers | `podman` | `docker run ...` (aliased) |
-| secrets | `chezmoi` + `age` | `essentials secret-add <f>` |
+| secrets | `chezmoi` + `age` | `dots secret-add <f>` |
 | example-first help | `tldr` (tealdeer) | `tldr ffmpeg` |
 | task runner | `just` | `just` lists recipes; `just build` |
 | file manager | `yazi` | `y` (cd's to where you quit) |

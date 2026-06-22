@@ -1,6 +1,6 @@
 # Usage tips — one per line. Shown at random on shell startup.
-# Lines starting with # and blank lines are ignored. Opt out: ESSENTIALS_NO_TIPS=1
-# Edit freely; `essentials tips` lists them all.
+# Lines starting with # and blank lines are ignored. Opt out: DOTS_NO_TIPS=1
+# Edit freely; `dots tips` lists them all.
 
 # --- moving around ---
 `z <part-of-path>` jumps to a frecent directory (zoxide). `zi` picks interactively.
@@ -31,17 +31,17 @@ Press Space in Neovim and wait — which-key pops a menu of every binding. No ne
 
 # --- git & hooks ---
 Direct commits to main/master are blocked — branch with `git switch -c feat/ROG-1-x`.
-Bypass a hook once with `git commit --no-verify`; turn all off with `essentials hooks disable`.
+Bypass a hook once with `git commit --no-verify`; turn all off with `dots hooks disable`.
 `git lg` shows a graph log; delta renders side-by-side colored diffs automatically.
 In a delta diff, `n`/`N` jumps between files/hunks (navigate is on).
 Pushing runs lint + fast tests for the repo's languages; skip with `HOOKS_SKIP_TESTS=1`.
 Commits auto-rebase on pull and push auto-sets upstream — no `-u` needed.
 
 # --- maintenance & tooling ---
-`essentials update` upgrades configs + every toolchain (brew, rust, swift, uv, nvim, doom).
+`dots update` upgrades configs + every toolchain (brew, rust, swift, uv, nvim, doom).
 `chezmoi edit ~/.zshrc` then `chezmoi apply` — never edit managed dotfiles in place.
 `chezmoi re-add` pulls a machine-local change back into the repo; then push it.
-Add a secret with `essentials secret-add <path>` — it's encrypted before it touches git.
+Add a secret with `dots secret-add <path>` — it's encrypted before it touches git.
 `man <cmd>` is rendered with syntax highlighting via bat. `cat` is bat; `ls` is eza.
 `docker` is aliased to podman — `docker run ...` just works without Docker Desktop.
 Per-language tools (goimports, gopls, dlv, clippy, pytest, mypy, …) ship preinstalled.

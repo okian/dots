@@ -1,6 +1,6 @@
-# essentials
+# dots
 
-[![CI](https://github.com/okian/essentials/actions/workflows/ci.yml/badge.svg)](https://github.com/okian/essentials/actions/workflows/ci.yml)
+[![CI](https://github.com/okian/dots/actions/workflows/ci.yml/badge.svg)](https://github.com/okian/dots/actions/workflows/ci.yml)
 
 My single source of truth for dotfiles, app/service configuration, and machine
 provisioning. One command sets up a fresh macOS or Linux (Ubuntu-first) machine
@@ -9,7 +9,7 @@ with everything below, always at the latest version.
 ## Install (one line)
 
 ```sh
-sh -c "$(curl -fsLS get.chezmoi.io)" -- init --apply github.com/okian/essentials
+sh -c "$(curl -fsLS get.chezmoi.io)" -- init --apply github.com/okian/dots
 ```
 
 This installs [chezmoi](https://chezmoi.io), clones this repo, prompts once for
@@ -59,12 +59,12 @@ Everything is integrated around a few habits — `nvim` is the editor everywhere
 `fzf`/`fd`/`rg`/`zoxide` for finding things, `lazygit`/`delta` for git.
 
 - **Cheatsheet** — aliases, keybindings, tool reference:
-  [`home/dot_config/essentials/cheatsheet.md`](home/dot_config/essentials/cheatsheet.md)
-  (on a set-up machine: `essentials cheatsheet`).
+  [`home/dot_config/dots/cheatsheet.md`](home/dot_config/dots/cheatsheet.md)
+  (on a set-up machine: `dots cheatsheet`).
 - **Workflows & best practices** — how to move/search/edit efficiently:
-  [`home/dot_config/essentials/workflows.md`](home/dot_config/essentials/workflows.md).
+  [`home/dot_config/dots/workflows.md`](home/dot_config/dots/workflows.md).
 - **Tips** — a random one prints on each shell startup (opt out with
-  `ESSENTIALS_NO_TIPS=1`); `essentials tips` lists them all.
+  `DOTS_NO_TIPS=1`); `dots tips` lists them all.
 
 ## How it's organized
 
@@ -82,7 +82,7 @@ so the same repo drives both platforms.
 
 ## Personal assets (fonts, DaVinci Resolve, scripts)
 
-Drop your own files into these locations, then `chezmoi apply` (or `essentials update`):
+Drop your own files into these locations, then `chezmoi apply` (or `dots update`):
 
 | Asset | Put files in | Lands at | How |
 |-------|--------------|----------|-----|
@@ -93,7 +93,7 @@ Drop your own files into these locations, then `chezmoi apply` (or `essentials u
 - **Fonts use Git LFS** (`.gitattributes` tracks `*.ttf/*.otf/*.ttc`) — versions large binaries cleanly and keeps them under the pre-commit large-file guard. `git lfs install` runs globally via the editors script.
 - **Empty for now:** each dir holds a `.gitkeep` placeholder (ignored, never written to `$HOME`); real files take over.
 - **`assets/` is source-only** (in `.chezmoiignore`) — the fonts script reads it from the repo instead of copying it into `$HOME`.
-- **Secret inside a script?** Don't commit it in the clear — `essentials secret-add <file>` encrypts it first.
+- **Secret inside a script?** Don't commit it in the clear — `dots secret-add <file>` encrypts it first.
 
 ## Daily use
 
@@ -105,9 +105,9 @@ Drop your own files into these locations, then `chezmoi apply` (or `essentials u
 | Pull latest + apply | `chezmoi update` |
 | Capture a machine change back | `chezmoi re-add` then `chezmoi git -- push` |
 | Add/remove a package | edit `packages.yaml` → `chezmoi apply` (auto re-installs) |
-| **Upgrade everything to latest** | `essentials update` |
+| **Upgrade everything to latest** | `dots update` |
 
-`essentials update` runs: `chezmoi update` → `brew upgrade && brew cleanup` →
+`dots update` runs: `chezmoi update` → `brew upgrade && brew cleanup` →
 `rustup update` → `swiftly update` → `uv self update` → neovim plugin sync →
 `doom upgrade`.
 
@@ -123,7 +123,7 @@ to keep in a public repo. The decryption key lives at a predefined path,
 ### One-time setup (on a trusted machine)
 
 ```sh
-essentials secrets-setup          # installs age, generates ~/.config/chezmoi/key.txt
+dots secrets-setup          # installs age, generates ~/.config/chezmoi/key.txt
                                   # prints your PUBLIC recipient key
 ```
 
@@ -134,7 +134,7 @@ essentials secrets-setup          # installs age, generates ~/.config/chezmoi/ke
 ### Encrypt & add a secret
 
 ```sh
-essentials secret-add ~/.ssh/id_ed25519       # -> stored as encrypted_*.age in the repo
+dots secret-add ~/.ssh/id_ed25519       # -> stored as encrypted_*.age in the repo
 chezmoi git -- add . ; chezmoi git -- commit -m "add ssh key" ; chezmoi git -- push
 ```
 
@@ -176,8 +176,8 @@ degrade to a skip — they never hard-fail a commit.
 `HOOKS_ALLOW_PROTECTED=1`, `HOOKS_ALLOW_REBASE=1`.
 
 ```sh
-essentials hooks status         # where they live, on/off, which tools are present
-essentials hooks disable        # global kill-switch
+dots hooks status         # where they live, on/off, which tools are present
+dots hooks disable        # global kill-switch
 git config hooks.allowProtected true    # e.g. let a solo repo commit to main
 ```
 
@@ -197,7 +197,7 @@ same repo just works on both.
 | `chezmoi apply` failed partway | It's idempotent — just re-run `chezmoi apply`. Inspect first with `chezmoi diff`. |
 | A `run_onchange_` script won't re-run after I edited what it installs | It only re-runs when its *rendered* content changes. Force every one: `chezmoi state delete-bucket --bucket=scriptState && chezmoi apply`. |
 | A managed dotfile got hand-edited and looks wrong | `chezmoi apply` overwrites it back to repo state. To keep the local change instead: `chezmoi re-add`. |
-| A git hook is blocking a commit/push I need to land | One-off: `git commit/push --no-verify`. Skip just tests: `HOOKS_SKIP_TESTS=1 git push`. All hooks off: `essentials hooks disable`. |
+| A git hook is blocking a commit/push I need to land | One-off: `git commit/push --no-verify`. Skip just tests: `HOOKS_SKIP_TESTS=1 git push`. All hooks off: `dots hooks disable`. |
 | Committing to `main` is blocked | Expected. Branch (`git switch -c feat/ROG-123-x`) or, for a solo repo, `git config hooks.allowProtected true`. |
 | New fonts don't show up | `chezmoi apply` (runs the font script). Linux: `fc-cache -f`. macOS: reopen the app. Check `~/Library/Fonts` / `~/.local/share/fonts`. |
 | `command not found` right after install | Open a new shell. Go tools live in `~/go/bin`, cargo in `~/.cargo/bin`, your scripts in `~/bins` — all added to `PATH` at login. |

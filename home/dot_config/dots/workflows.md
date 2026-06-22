@@ -1,4 +1,4 @@
-# essentials — workflows & best practices
+# dots — workflows & best practices
 
 How to combine the tools in this setup to move, search, and edit fast. These are
 patterns, not rules — steal what fits.
@@ -59,13 +59,13 @@ A two-step rhythm beats scrolling: **filter to candidates, then act.**
 
 - **Never paste a secret into a tracked file.** The pre-commit secret scan
   (gitleaks → regex fallback) will block it.
-- **To version a secret,** encrypt it: `essentials secret-add ~/.ssh/id_ed25519`
+- **To version a secret,** encrypt it: `dots secret-add ~/.ssh/id_ed25519`
   stores ciphertext (`encrypted_*.age`) that's safe in a public repo. It only
   decrypts on machines that hold `~/.config/chezmoi/key.txt` — back that key up.
 
 ## Keeping the machine current
 
-- **One command:** `essentials update` — pulls config changes and upgrades brew,
+- **One command:** `dots update` — pulls config changes and upgrades brew,
   rust, swift, uv/python, Neovim plugins, and Doom.
 - **Change configs the chezmoi way:** `chezmoi edit ~/.config/nvim/init.lua` →
   `chezmoi apply`. To preview, `chezmoi diff`. Never hand-edit a managed file in

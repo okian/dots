@@ -1,7 +1,7 @@
-# `essentials` command — one-shot update of configs + every toolchain.
-# Usage:  essentials update
+# `dots` command — one-shot update of configs + every toolchain.
+# Usage:  dots update
 
-def "essentials update" [] {
+def "dots update" [] {
   print "==> chezmoi update (pull configs + apply)"
   try { ^chezmoi update }
 
@@ -41,54 +41,54 @@ def _have_chezmoi [] {
 }
 
 # Preview what applying would change in $HOME.
-def "essentials diff" [] {
+def "dots diff" [] {
   if not (_have_chezmoi) { return }
   ^chezmoi diff
 }
 
 # Apply your local source edits to $HOME.
-def "essentials apply" [] {
+def "dots apply" [] {
   if not (_have_chezmoi) { return }
   ^chezmoi apply
   print "==> applied."
 }
 
-# Edit a managed file (edits the source, then applies it). e.g. essentials edit ~/.config/git/config
-def "essentials edit" [...file: string] {
+# Edit a managed file (edits the source, then applies it). e.g. dots edit ~/.config/git/config
+def "dots edit" [...file: string] {
   if not (_have_chezmoi) { return }
-  if ($file | is-empty) { print "usage: essentials edit <file> [<file> …]"; return }
+  if ($file | is-empty) { print "usage: dots edit <file> [<file> …]"; return }
   ^chezmoi edit --apply ...$file
 }
 
 # Show the fully rendered content a target file would have.
-def "essentials show" [file: string] {
+def "dots show" [file: string] {
   if not (_have_chezmoi) { return }
   ^chezmoi cat $file
 }
 
 # Start managing an existing file (copy it into the repo). --encrypt for secrets.
-def "essentials add" [path: string, --encrypt] {
+def "dots add" [path: string, --encrypt] {
   if not (_have_chezmoi) { return }
   if $encrypt { ^chezmoi add --encrypt $path } else { ^chezmoi add $path }
   print $"==> now managing ($path)(if $encrypt { ' (encrypted)' } else { '' })."
 }
 
 # Stop managing a file (leaves it in $HOME, removes it from the repo).
-def "essentials forget" [path: string] {
+def "dots forget" [path: string] {
   if not (_have_chezmoi) { return }
   ^chezmoi forget $path
 }
 
 # Pull the latest from the remote and apply (git pull + apply). The downward
-# counterpart to `save`. (`essentials update` also upgrades every toolchain.)
-def "essentials pull" [] {
+# counterpart to `save`. (`dots update` also upgrades every toolchain.)
+def "dots pull" [] {
   if not (_have_chezmoi) { return }
   ^chezmoi update
   print "==> pulled & applied."
 }
 
 # Save ALL local repo changes upward: stage everything, commit, push.
-def "essentials save" [message?: string] {
+def "dots save" [message?: string] {
   if not (_have_chezmoi) { return }
   let dirty = (^chezmoi git -- status --porcelain | complete | get stdout | str trim)
   if ($dirty | is-empty) { print "nothing to save — the repo is clean."; return }
@@ -99,7 +99,7 @@ def "essentials save" [message?: string] {
 }
 
 # Overview: repo git status + a summary of pending changes to apply.
-def "essentials status" [] {
+def "dots status" [] {
   if not (_have_chezmoi) { return }
   print "── repo (uncommitted changes) ──"
   ^chezmoi git -- status -sb
@@ -110,25 +110,25 @@ def "essentials status" [] {
 }
 
 # Jump into the dotfiles source directory.
-def --env "essentials cd" [] {
+def --env "dots cd" [] {
   if not (_have_chezmoi) { return }
   cd (^chezmoi source-path | str trim)
 }
 
 # Recent commit history of the dotfiles repo.
-def "essentials log" [n: int = 15] {
+def "dots log" [n: int = 15] {
   if not (_have_chezmoi) { return }
   ^chezmoi git -- log --oneline -n $n
 }
 
 # List every file this repo manages.
-def "essentials managed" [] {
+def "dots managed" [] {
   if not (_have_chezmoi) { return }
   ^chezmoi managed
 }
 
 # Diagnose the chezmoi/toolchain setup.
-def "essentials doctor" [] {
+def "dots doctor" [] {
   if not (_have_chezmoi) { return }
   ^chezmoi doctor
 }
@@ -136,7 +136,7 @@ def "essentials doctor" [] {
 # --- Secrets (age encryption) ----------------------------------------------
 
 # One-time: generate the age keypair on a trusted machine.
-def "essentials secrets-setup" [] {
+def "dots secrets-setup" [] {
   let dir = ($nu.home-dir | path join '.config' 'chezmoi')
   mkdir $dir
   let key = ($dir | path join 'key.txt')
@@ -160,7 +160,7 @@ def "essentials secrets-setup" [] {
 }
 
 # Encrypt a file and add it to the repo (ciphertext is safe to commit/push).
-def "essentials secret-add" [path: string] {
+def "dots secret-add" [path: string] {
   ^chezmoi add --encrypt $path
   print $"==> Encrypted and staged ($path)."
   print "Commit & push:  chezmoi git -- add . ; chezmoi git -- commit -m secret ; chezmoi git -- push"
@@ -174,15 +174,15 @@ def _gi_confd [] { $nu.home-dir | path join '.config' 'git' 'conf.d' }
 def _gi_file [entity: string] { (_gi_confd) | path join $"($entity).gitconfig" }
 
 # Regenerate the includeIf blocks from the current ~/repos layout.
-def "essentials git-identity sync" [] {
+def "dots git-identity sync" [] {
   let bin = ($nu.home-dir | path join 'bins' 'git-identities-sync')
   if ($bin | path exists) { ^$bin } else { print "git-identities-sync not installed — run `chezmoi apply`" }
 }
 
 # List entities, their resolved identity, and whether a ~/repos dir exists.
-def "essentials git-identity list" [] {
+def "dots git-identity list" [] {
   let confd = (_gi_confd)
-  if not ($confd | path exists) { print "no identities yet — run `essentials git-identity sync`"; return }
+  if not ($confd | path exists) { print "no identities yet — run `dots git-identity sync`"; return }
   let repos = ($nu.home-dir | path join 'repos')
   glob ($confd | path join '*.gitconfig')
     | where {|p| ($p | path basename) != 'identities.gitconfig' }
@@ -234,28 +234,28 @@ def _gi_persist [entity: string, needles: list<string>, push: bool] {
 }
 
 # Create/overwrite an entity identity, then encrypt + commit + push (--no-push
-# to stop before pushing). e.g. essentials git-identity add cuju you@cuju.org
-def "essentials git-identity add" [entity: string, email: string, name?: string, --no-push] {
+# to stop before pushing). e.g. dots git-identity add cuju you@cuju.org
+def "dots git-identity add" [entity: string, email: string, name?: string, --no-push] {
   let confd = (_gi_confd)
   mkdir $confd
   let nm = ($name | default (try { ^git config --global user.name | str trim } catch { '' }))
   let pef = (_gi_file $entity)
-  ([$"# git identity for \"($entity)\" — managed via `essentials git-identity`."
+  ([$"# git identity for \"($entity)\" — managed via `dots git-identity`."
     "[user]"
     $"\tname = ($nm)"
     $"\temail = ($email)"
     ""] | str join (char nl)) | save -f $pef
   mkdir ($nu.home-dir | path join 'repos' $entity)
-  essentials git-identity sync
+  dots git-identity sync
   print $"==> wrote ($pef) and ensured ~/repos/($entity)/"
   _gi_persist $entity [$email $nm] (not $no_push)
 }
 
 # Edit an entity's identity in $EDITOR; if it changed, re-encrypt + commit + push.
-def "essentials git-identity edit" [entity: string, --no-push] {
+def "dots git-identity edit" [entity: string, --no-push] {
   let pef = (_gi_file $entity)
   if not ($pef | path exists) {
-    print $"no such identity: ($entity). Create it with `essentials git-identity add ($entity) <email>`."
+    print $"no such identity: ($entity). Create it with `dots git-identity add ($entity) <email>`."
     return
   }
   let before = (open --raw $pef | hash sha256)
@@ -264,7 +264,7 @@ def "essentials git-identity edit" [entity: string, --no-push] {
     print "no changes — nothing to commit."
     return
   }
-  essentials git-identity sync
+  dots git-identity sync
   let email = (try { ^git config -f $pef user.email | str trim } catch { '' })
   let nm    = (try { ^git config -f $pef user.name  | str trim } catch { '' })
   _gi_persist $entity [$email $nm] (not $no_push)
@@ -273,7 +273,7 @@ def "essentials git-identity edit" [entity: string, --no-push] {
 # --- Global git hooks ------------------------------------------------------
 
 # Show hook status (where they live, enabled?, available tools).
-def "essentials hooks status" [] {
+def "dots hooks status" [] {
   let path = (^git config --global --get core.hooksPath | str trim)
   print $"hooksPath: ($path)"
   let disabled = (^git config --global --get hooks.disable | str trim)
@@ -285,31 +285,31 @@ def "essentials hooks status" [] {
 }
 
 # Turn all hooks off / on globally.
-def "essentials hooks disable" [] { ^git config --global hooks.disable true;  print "global hooks disabled" }
-def "essentials hooks enable"  [] { ^git config --global --unset hooks.disable; print "global hooks enabled" }
+def "dots hooks disable" [] { ^git config --global hooks.disable true;  print "global hooks disabled" }
+def "dots hooks enable"  [] { ^git config --global --unset hooks.disable; print "global hooks enabled" }
 
 # Run the pre-commit hook now against staged changes (dry test).
-def "essentials hooks test" [] {
+def "dots hooks test" [] {
   let h = (^git config --global --get core.hooksPath | str trim | path join 'pre-commit')
   if ($h | path exists) { ^$h } else { print "no pre-commit hook found" }
 }
 
 # --- Tips & docs -----------------------------------------------------------
 
-def _tips_file [] { $nu.home-dir | path join '.config' 'essentials' 'tips.txt' }
+def _tips_file [] { $nu.home-dir | path join '.config' 'dots' 'tips.txt' }
 
 # Print one random usage tip (shown on shell startup).
-def "essentials tip" [] {
+def "dots tip" [] {
   let f = (_tips_file)
   if not ($f | path exists) { return }
   let tips = (open $f | lines | where {|l| (($l | str trim) != "") and (not ($l | str starts-with "#")) })
   if ($tips | is-empty) { return }
   let t = ($tips | get (random int 0..(($tips | length) - 1)))
-  print $"(ansi yellow_bold)💡 tip(ansi reset) ($t) (ansi dark_gray)— `essentials tips` for more(ansi reset)"
+  print $"(ansi yellow_bold)💡 tip(ansi reset) ($t) (ansi dark_gray)— `dots tips` for more(ansi reset)"
 }
 
 # List all tips.
-def "essentials tips" [] {
+def "dots tips" [] {
   let f = (_tips_file)
   if ($f | path exists) {
     open $f | lines | where {|l| (($l | str trim) != "") and (not ($l | str starts-with "#")) }
@@ -318,43 +318,43 @@ def "essentials tips" [] {
 }
 
 # Open the cheatsheet (aliases, keybindings, workflows).
-def "essentials cheatsheet" [] {
-  let f = ($nu.home-dir | path join '.config' 'essentials' 'cheatsheet.md')
+def "dots cheatsheet" [] {
+  let f = ($nu.home-dir | path join '.config' 'dots' 'cheatsheet.md')
   if not ($f | path exists) { print "no cheatsheet found"; return }
   if (which bat | is-not-empty) { ^bat --style=plain --paging=always -l md $f } else { open $f | print }
 }
 
-# Bare `essentials` prints help.
-def "essentials" [] {
-  print "essentials — one command to manage this machine (wraps chezmoi, git, toolchains)"
+# Bare `dots` prints help.
+def "dots" [] {
+  print "dots — one command to manage this machine (wraps chezmoi, git, toolchains)"
   print ""
   print "  Dotfiles (local):"
-  print "    essentials edit <file>     edit a managed file, then apply it"
-  print "    essentials diff            preview pending changes to your home dir"
-  print "    essentials apply           apply your local edits to your home dir"
-  print "    essentials add <p>         start managing a file  (--encrypt for secrets)"
-  print "    essentials forget <p>      stop managing a file"
-  print "    essentials show <file>     show a file's fully rendered content"
+  print "    dots edit <file>     edit a managed file, then apply it"
+  print "    dots diff            preview pending changes to your home dir"
+  print "    dots apply           apply your local edits to your home dir"
+  print "    dots add <p>         start managing a file  (--encrypt for secrets)"
+  print "    dots forget <p>      stop managing a file"
+  print "    dots show <file>     show a file's fully rendered content"
   print ""
   print "  Dotfiles (remote):"
-  print "    essentials pull            get latest from the remote and apply  (↓)"
-  print "    essentials save [msg]      stage everything, commit & push        (↑)"
-  print "    essentials status          uncommitted changes + pending apply"
-  print "    essentials log [n]         recent dotfiles commits"
+  print "    dots pull            get latest from the remote and apply  (↓)"
+  print "    dots save [msg]      stage everything, commit & push        (↑)"
+  print "    dots status          uncommitted changes + pending apply"
+  print "    dots log [n]         recent dotfiles commits"
   print ""
   print "  Maintenance:"
-  print "    essentials update          pull + apply + upgrade every toolchain"
-  print "    essentials cd              jump into the dotfiles source dir"
-  print "    essentials managed         list every managed file"
-  print "    essentials doctor          diagnose the setup"
+  print "    dots update          pull + apply + upgrade every toolchain"
+  print "    dots cd              jump into the dotfiles source dir"
+  print "    dots managed         list every managed file"
+  print "    dots doctor          diagnose the setup"
   print ""
   print "  Identities, secrets & hooks:"
-  print "    essentials git-identity    per-entity git identities: list|add|edit|sync"
-  print "    essentials secrets-setup   generate the age key (once, trusted machine)"
-  print "    essentials secret-add <p>  encrypt a file & add it to the repo"
-  print "    essentials hooks           global git-hooks: status|enable|disable|test"
+  print "    dots git-identity    per-entity git identities: list|add|edit|sync"
+  print "    dots secrets-setup   generate the age key (once, trusted machine)"
+  print "    dots secret-add <p>  encrypt a file & add it to the repo"
+  print "    dots hooks           global git-hooks: status|enable|disable|test"
   print ""
   print "  Docs:"
-  print "    essentials cheatsheet      aliases + keybindings + workflows"
-  print "    essentials tip | tips      random / all usage tips"
+  print "    dots cheatsheet      aliases + keybindings + workflows"
+  print "    dots tip | tips      random / all usage tips"
 }

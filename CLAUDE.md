@@ -57,13 +57,13 @@ chezmoi apply --dry-run --force    # render without touching the system
 chezmoi execute-template < home/run_onchange_after_20-languages.sh.tmpl   # render one template
 chezmoi cat ~/.config/git/config   # show what a target file would render to
 chezmoi update                     # git pull + apply
-essentials update                  # apply + upgrade every toolchain (defined in nushell/essentials.nu)
+dots update                  # apply + upgrade every toolchain (defined in nushell/dots.nu)
 ```
 
-The `essentials` command (nushell) is also the user-facing wrapper over chezmoi for
-daily repo management — `essentials {edit,diff,apply,add,show,pull,save,status,cd,log,managed,doctor}`
+The `dots` command (nushell) is also the user-facing wrapper over chezmoi for
+daily repo management — `dots {edit,diff,apply,add,show,pull,save,status,cd,log,managed,doctor}`
 mirror the chezmoi commands above so users never call `chezmoi` directly. When you add a
-chezmoi workflow, add the matching `essentials` subcommand and a line to the bare-`essentials` help.
+chezmoi workflow, add the matching `dots` subcommand and a line to the bare-`dots` help.
 
 There is no test suite. **Validation = CI** (`.github/workflows/ci.yml`), which you should
 mirror locally before pushing:
@@ -75,12 +75,12 @@ mirror locally before pushing:
 
 - Provisioning scripts are **bash**, `set -euo pipefail`, idempotent, and degrade gracefully
   (missing tool → skip, never hard-fail). Guard OS-specific blocks with `{{ if .isMac }}` etc.
-- The `essentials` command lives in `home/dot_config/nushell/essentials.nu` — it's **nushell**,
-  not bash. Subcommands are defined as `def "essentials <name>" []`.
+- The `dots` command lives in `home/dot_config/nushell/dots.nu` — it's **nushell**,
+  not bash. Subcommands are defined as `def "dots <name>" []`.
 - To add a tool: edit `packages.yaml` (correct list for its platform), then `chezmoi apply`.
   The installer re-runs automatically. Don't add install logic elsewhere.
-- User-facing docs are first-class files surfaced by the `essentials` command:
-  `home/dot_config/essentials/{cheatsheet.md,workflows.md,tips.txt}`. Update them when behavior changes.
+- User-facing docs are first-class files surfaced by the `dots` command:
+  `home/dot_config/dots/{cheatsheet.md,workflows.md,tips.txt}`. Update them when behavior changes.
 - **Personal assets**: fonts live in source-only `home/assets/fonts/` (in `.chezmoiignore`,
   installed by `run_onchange_after_35-fonts` because the target dir differs per OS); DaVinci
   Resolve LUTs/DCTLs and `~/bins` scripts are managed directly under `home/dot_local/...` and
@@ -92,7 +92,7 @@ mirror locally before pushing:
 Secrets are committed as age-encrypted ciphertext. The private key lives at
 `~/.config/chezmoi/key.txt` (never committed). `.chezmoiignore` skips all `.secrets`/`.ssh/id_*`
 files entirely when that key is absent, so the repo applies cleanly on machines without it.
-Add a secret with `essentials secret-add <path>` (wraps `chezmoi add --encrypt`).
+Add a secret with `dots secret-add <path>` (wraps `chezmoi add --encrypt`).
 
 ## Global git hooks
 
@@ -111,7 +111,7 @@ identity. `home/bins/executable_git-identities-sync` (installed to `~/bins`, on 
 entity dir, each pointing at `conf.d/<entity>.gitconfig`. The global `git/config.tmpl` ends with
 `[include] conf.d/identities.gitconfig` so a matching entity's `[user]` overrides the global one.
 `run_after_45-git-identities` (a plain `run_`, so it runs **every** apply) invokes the generator;
-`essentials git-identity {sync,list,add,edit}` are the nushell front-ends. Per-entity files are
+`dots git-identity {sync,list,add,edit}` are the nushell front-ends. Per-entity files are
 created only when missing (never clobbered) and persisted across machines as age-encrypted
 `conf.d/*.gitconfig` (gated in `.chezmoiignore` when no key); when `~/repos` is empty those
 encrypted entities are recreated as dirs. Don't hand-edit `identities.gitconfig` — it's generated.

@@ -1,6 +1,6 @@
 # Single source of truth for everything installed via a package manager.
 #
-# Edit this file, then run `chezmoi apply` (or `essentials update`). The
+# Edit this file, then run `chezmoi apply` (or `dots update`). The
 # run_onchange_ installer scripts embed a hash of this file, so any change
 # here automatically re-runs the relevant installer — no other wiring needed.
 #

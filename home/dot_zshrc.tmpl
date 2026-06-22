@@ -83,12 +83,12 @@ _brew_prefix="$(brew --prefix 2>/dev/null)"
   source "$_brew_prefix/share/zsh-fast-syntax-highlighting/fast-syntax-highlighting.plugin.zsh"
 unset _brew_prefix
 
-# Random usage tip on interactive startup (opt out: export ESSENTIALS_NO_TIPS=1).
-if [[ -o interactive && -z "${ESSENTIALS_NO_TIPS:-}" && -r ~/.config/essentials/tips.txt ]]; then
-  _tip=$(grep -vE '^[[:space:]]*(#|$)' ~/.config/essentials/tips.txt | sort -R | head -1)
-  [ -n "$_tip" ] && print -P "%B%F{yellow}💡 tip%f%b ${_tip} %F{8}— cheatsheet: ~/.config/essentials/cheatsheet.md%f"
+# Random usage tip on interactive startup (opt out: export DOTS_NO_TIPS=1).
+if [[ -o interactive && -z "${DOTS_NO_TIPS:-}" && -r ~/.config/dots/tips.txt ]]; then
+  _tip=$(grep -vE '^[[:space:]]*(#|$)' ~/.config/dots/tips.txt | sort -R | head -1)
+  [ -n "$_tip" ] && print -P "%B%F{yellow}💡 tip%f%b ${_tip} %F{8}— cheatsheet: ~/.config/dots/cheatsheet.md%f"
   unset _tip
 fi
-# Quick doc helpers in the fallback shell, mirroring nushell's `essentials`.
-tips()       { grep -vE '^[[:space:]]*(#|$)' ~/.config/essentials/tips.txt; }
-cheatsheet() { bat --style=plain --paging=always -l md ~/.config/essentials/cheatsheet.md 2>/dev/null || cat ~/.config/essentials/cheatsheet.md; }
+# Quick doc helpers in the fallback shell, mirroring nushell's `dots`.
+tips()       { grep -vE '^[[:space:]]*(#|$)' ~/.config/dots/tips.txt; }
+cheatsheet() { bat --style=plain --paging=always -l md ~/.config/dots/cheatsheet.md 2>/dev/null || cat ~/.config/dots/cheatsheet.md; }
