@@ -52,13 +52,32 @@ hook_step() { printf '%s→ %s%s\n' "$_CYN" "$*" "$_RST" >&2; }
 # ---------------------------------------------------------------------------
 # Global enable/disable.
 # ---------------------------------------------------------------------------
-hooks_disabled() { [ "${HOOKS_DISABLE:-}" = 1 ] || cfg_bool disable false; }
+hooks_disabled() {
+  [ "${HOOKS_DISABLE:-}" = 1 ] && return 0
+  cfg_bool disable false && return 0
+  foreign_repo && return 0   # never police tool-managed repos (Homebrew, taps, …)
+  return 1
+}
 
 # ---------------------------------------------------------------------------
 # Git state helpers.
 # ---------------------------------------------------------------------------
 have()           { command -v "$1" >/dev/null 2>&1; }
 repo_root()      { git rev-parse --show-toplevel 2>/dev/null; }
+
+# True when the repo is managed by a tool (Homebrew & its taps), not by the
+# user. The global hooks must never police these — e.g. Homebrew's auto-update
+# rebases its own 'main', which would otherwise trip pre-rebase/pre-push.
+foreign_repo() {
+  local root; root=$(repo_root) || return 1
+  [ -n "$root" ] || return 1
+  case "$root" in
+    "${HOMEBREW_PREFIX:-/opt/homebrew}" | "${HOMEBREW_PREFIX:-/opt/homebrew}"/*) return 0 ;;
+    */Homebrew | */Homebrew/* | */Library/Taps/*) return 0 ;;
+    /opt/homebrew | /opt/homebrew/* | /home/linuxbrew/* | /usr/local/Homebrew | /usr/local/Homebrew/*) return 0 ;;
+  esac
+  return 1
+}
 git_dir()        { git rev-parse --git-dir 2>/dev/null; }
 current_branch() { git symbolic-ref --quiet --short HEAD 2>/dev/null || true; }
 in_worktree()    { [ "$(git rev-parse --is-inside-work-tree 2>/dev/null)" = true ]; }
