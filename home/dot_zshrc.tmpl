@@ -6,7 +6,7 @@
 [ -x "{{ $brew }}/bin/brew" ] && eval "$({{ $brew }}/bin/brew shellenv)"
 
 # PATH
-export PATH="$HOME/.swiftly/bin:$HOME/.cargo/bin:$HOME/.local/bin:$PATH"
+export PATH="$HOME/.swiftly/bin:$HOME/.cargo/bin:$HOME/go/bin:$HOME/.local/bin:$HOME/bins:$PATH"
 # Neovim is THE editor everywhere.
 export EDITOR=nvim VISUAL=nvim GIT_EDITOR=nvim KUBE_EDITOR=nvim
 # Pretty man pages via bat.
@@ -31,7 +31,8 @@ if command -v fd >/dev/null; then
   export FZF_DEFAULT_COMMAND='fd --type f --hidden --follow --exclude .git'
   export FZF_CTRL_T_COMMAND="$FZF_DEFAULT_COMMAND"
   export FZF_ALT_C_COMMAND='fd --type d --hidden --follow --exclude .git'
-  export FZF_DEFAULT_OPTS='--height 45% --layout reverse --border --info inline'
+  # Catppuccin Mocha palette — matches WezTerm/tmux/Neovim.
+  export FZF_DEFAULT_OPTS='--height 45% --layout reverse --border --info inline --color=bg+:#313244,bg:#1e1e2e,spinner:#f5e0dc,hl:#f38ba8 --color=fg:#cdd6f4,header:#f38ba8,info:#cba6f7,pointer:#f5e0dc --color=marker:#b4befe,fg+:#cdd6f4,prompt:#cba6f7,hl+:#f38ba8'
   export FZF_CTRL_T_OPTS="--preview 'bat --color=always --style=numbers {} 2>/dev/null || eza --tree --color=always {}'"
   export FZF_ALT_C_OPTS="--preview 'eza --tree --level=2 --color=always {}'"
 fi
@@ -40,11 +41,19 @@ fi
 ff() { local f; f=$(fd --type f --hidden --follow --exclude .git | fzf --preview 'bat --color=always --style=numbers {} 2>/dev/null'); [ -n "$f" ] && ${EDITOR:-nvim} "$f"; }
 # Fuzzy-find a directory and cd into it.
 fcd() { local d; d=$(fd --type d --hidden --follow --exclude .git | fzf --preview 'eza --tree --level=2 --color=always {}'); [ -n "$d" ] && cd "$d"; }
+# `y` opens yazi and cd's to wherever you quit it (official wrapper; `command cat` dodges the bat alias).
+y() {
+  local tmp cwd; tmp="$(mktemp -t yazi-cwd.XXXXXX)"
+  yazi "$@" --cwd-file="$tmp"
+  if cwd="$(command cat -- "$tmp")" && [ -n "$cwd" ] && [ "$cwd" != "$PWD" ]; then cd -- "$cwd"; fi
+  rm -f -- "$tmp"
+}
 
 # Aliases
 alias ll='eza -la --icons --group-directories-first 2>/dev/null || ls -la'
 alias lt='eza --tree --level=2 --icons'
 alias g='git' lg='lazygit' v='nvim' vim='nvim' cat='bat'
+alias top='btop'
 alias nu='nu'   # drop into nushell anytime
 # Container muscle-memory: docker -> podman
 alias docker='podman' docker-compose='podman-compose' dc='podman-compose'

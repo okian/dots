@@ -57,7 +57,9 @@ View anytime with `essentials cheatsheet` (nushell) or `cheatsheet` (zsh).
 | `<leader>ca` / `<leader>cr` | code action / rename |
 | `<leader>cf` | format buffer |
 | `<leader>l` | Lazy plugin manager |
+| `:LazyExtras` | add language/tool support (toggle a row, restart) |
 | `<leader>bd` | close buffer |
+| `Space` (wait) | **which-key** menu — discover every binding, no memorizing |
 | `:checkhealth` | diagnose your setup |
 
 ## tmux (prefix = `Ctrl-a`)
@@ -88,8 +90,25 @@ Standard macOS shortcuts: `⌘T` new tab, `⌘W` close, `⌘1–9` switch tab,
 | jump dirs | `zoxide` | `z proj` |
 | JSON / YAML | `jq` / `yq` | `cat x.json | jq .` |
 | git TUI | `lazygit` | `lg` |
-| diffs | `delta` | (auto, via git) |
+| diffs | `delta` | (auto, via git; `n`/`N` navigates hunks) |
+| structural diff | `difftastic` | `git dft` |
+| auto-fixup commits | `git-absorb` | `git absorb` |
 | containers | `podman` | `docker run ...` (aliased) |
 | secrets | `chezmoi` + `age` | `essentials secret-add <f>` |
+| example-first help | `tldr` (tealdeer) | `tldr ffmpeg` |
+| task runner | `just` | `just` lists recipes; `just build` |
+| file manager | `yazi` | `y` (cd's to where you quit) |
+| system monitor | `btop` | `btop` (also `top`) |
+| disk usage / free | `dust` / `duf` | `dust`, `duf` |
+| processes | `procs` | `procs node` |
+| find & replace | `sd` | `sd 'foo' 'bar' file` |
+| HTTP client | `xh` | `xh GET httpbin.org/json` |
+| JSON explorer | `jless` | `jless < big.json` |
+| benchmarking | `hyperfine` | `hyperfine 'cmd a' 'cmd b'` |
+| kubernetes TUI | `k9s` | `k9s` |
+| image/repo scan | `trivy` | `trivy fs .` |
+| image layers | `dive` | `dive <image>` |
+| media metadata | `exiftool` | `exiftool clip.mov` |
+| download video | `yt-dlp` | `yt-dlp <url>` |
 
 See `workflows.md` (next to this file) for how to combine these efficiently.

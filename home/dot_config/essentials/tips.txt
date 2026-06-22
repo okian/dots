@@ -8,6 +8,8 @@
 Press Alt-C to fuzzy-cd into a subdirectory; Ctrl-T to insert a file path.
 `lt` shows a 2-level tree (eza); `ll` is a detailed list with icons.
 In tmux: prefix is Ctrl-a. `|` splits vertical, `-` splits horizontal, prefix+r reloads.
+Ctrl-h/j/k/l moves between tmux panes AND Neovim splits seamlessly — no prefix.
+`tmux a` reattaches your last session; `prefix d` detaches without losing layout.
 
 # --- searching ---
 `rg <pattern>` searches file contents fast; add `-t go` / `-t rust` to scope by language.
@@ -22,12 +24,18 @@ Neovim is $EDITOR everywhere — git, kubectl, and `fc` all open in nvim.
 `lg` opens lazygit — stage hunks, write commits, manage branches visually.
 Commit subjects need a ticket key (e.g. ROG-1234) — the commit-msg hook enforces it.
 `gf`/`gd` in Neovim jump to definition; `K` shows hover docs; `<space>ca` for code actions.
+`<space>cr` renames a symbol project-wide; `<space>cf` formats the buffer.
+Add language support in Neovim with `:LazyExtras` — toggle a row, restart.
+Press Space in Neovim and wait — which-key pops a menu of every binding. No need to memorize.
+`y` opens yazi: a file manager with image/video previews; quit and your shell cd's there.
 
 # --- git & hooks ---
 Direct commits to main/master are blocked — branch with `git switch -c feat/ROG-1-x`.
 Bypass a hook once with `git commit --no-verify`; turn all off with `essentials hooks disable`.
 `git lg` shows a graph log; delta renders side-by-side colored diffs automatically.
+In a delta diff, `n`/`N` jumps between files/hunks (navigate is on).
 Pushing runs lint + fast tests for the repo's languages; skip with `HOOKS_SKIP_TESTS=1`.
+Commits auto-rebase on pull and push auto-sets upstream — no `-u` needed.
 
 # --- maintenance & tooling ---
 `essentials update` upgrades configs + every toolchain (brew, rust, swift, uv, nvim, doom).
@@ -36,3 +44,10 @@ Pushing runs lint + fast tests for the repo's languages; skip with `HOOKS_SKIP_T
 Add a secret with `essentials secret-add <path>` — it's encrypted before it touches git.
 `man <cmd>` is rendered with syntax highlighting via bat. `cat` is bat; `ls` is eza.
 `docker` is aliased to podman — `docker run ...` just works without Docker Desktop.
+Per-language tools (goimports, gopls, dlv, clippy, pytest, mypy, …) ship preinstalled.
+Add a dev tool: edit `go_tools`/`cargo_tools`/`python_tools`/`node_globals` in packages.yaml → `chezmoi apply`.
+`tldr <cmd>` shows example-first usage (tealdeer) — faster than scrolling a full man page.
+`just` runs project tasks from a justfile: bare `just` lists recipes, `just <name>` runs one.
+`git dft` shows a structural, syntax-aware diff (difftastic); `git absorb` auto-fixups staged hunks.
+`btop` is a live system monitor; `dust` = disk usage, `duf` = free space, `procs` = process search.
+`sd 'old' 'new' file` is a saner find-and-replace than sed; `hyperfine 'cmd'` benchmarks it.

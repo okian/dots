@@ -23,15 +23,35 @@ your git name/email, then applies all dotfiles and runs the provisioning scripts
 | Shell UX    | carapace (completions), atuin (history), direnv, fzf, zoxide |
 | Editors     | **neovim + LazyVim**, **Doom Emacs**, tmux (+ tpm) |
 | Languages   | rust (rustup), swift (swiftly), go, python (+ uv), node |
+| Dev tools   | per-language LSPs/linters/formatters: clippy·rustfmt·rust-analyzer, goimports·gopls·dlv·gofumpt, pytest·mypy, prettier·eslint·tsc (see `go_tools`/`cargo_tools`/`python_tools`/`node_globals` in `packages.yaml`) |
 | Terminal    | **wezterm** |
 | Containers  | **podman** (rootless; `podman machine` on macOS) — no Docker Desktop; `docker`→`podman` shim |
-| Fuzzy/nav   | fzf, zoxide, ripgrep, fd, bat, eza |
-| Git         | git, git-delta, lazygit, gh, global ignore + commit template |
-| AI          | Claude Code CLI |
+| Fuzzy/nav   | fzf, zoxide, ripgrep, fd, bat, eza, **yazi** (file manager w/ previews) |
+| Modern CLI  | tldr (tealdeer), just, btop, dust/duf/procs, sd, hyperfine, xh, jless |
+| Git         | git, git-delta, lazygit, gh, **difftastic** (`git dft`), **git-absorb**, global ignore + commit template |
+| Containers  | podman, podman-compose, **dive**, **trivy** (CVE/secret scan) |
+| Kubernetes  | kubectl, **k9s** |
+| Media       | ffmpeg, imagemagick, exiftool, yt-dlp |
+| AI          | Claude Code CLI, ollama |
 
 > On macOS, `run_once_after_70-macos-defaults` applies sane system defaults
 > (dark mode, orange accent, fast key repeat, screenshots → `~/Pictures/Screenshots`, …).
 > Pushes are validated by CI (template render + shellcheck).
+
+## Principles
+
+A few deliberate choices, so the "why" survives:
+
+- **nushell as the daily shell** (zsh kept as a working fallback) — structured-data
+  pipelines over text munging.
+- **Per-language version managers** (rustup / swiftly / uv) instead of one umbrella tool —
+  each language gets its first-class, always-current toolchain. (`mise` is the unified
+  alternative; chosen against on purpose.)
+- **podman over Docker Desktop** — rootless, daemonless, no licensing; `docker` is shimmed to it.
+- **One theme everywhere** — Catppuccin Mocha across WezTerm, tmux, Neovim, and fzf.
+- **`packages.yaml` is the single source of truth** — add a tool there, never in an ad-hoc script.
+- **Hooks enforce hygiene globally** (secret scan, protected branches, format/lint/test) with
+  easy, explicit bypasses.
 
 ## Docs & tips
 
@@ -59,6 +79,21 @@ Everything is integrated around a few habits — `nvim` is the editor everywhere
 
 OS/arch branching is handled by chezmoi templates (`.chezmoi.os`, `.chezmoi.arch`),
 so the same repo drives both platforms.
+
+## Personal assets (fonts, DaVinci Resolve, scripts)
+
+Drop your own files into these locations, then `chezmoi apply` (or `essentials update`):
+
+| Asset | Put files in | Lands at | How |
+|-------|--------------|----------|-----|
+| **Fonts** (`.ttf`/`.otf`/`.ttc`) | `home/assets/fonts/` | `~/Library/Fonts` (macOS) · `~/.local/share/fonts` (Linux) | `run_onchange_after_35-fonts` copies them, rebuilds the font cache on Linux |
+| **DaVinci Resolve** (LUTs `.cube`/`.3dl`, DCTLs `.dctl`, …) | `home/dot_local/share/davinci-resolve/{LUT,DCTL}/` | `~/.local/share/davinci-resolve/…` | managed directly. **One-time:** add that folder in Resolve → *Preferences → System → LUT* (DCTLs in it are picked up too) |
+| **Personal scripts** | `home/bins/` (name each `executable_<name>`) | `~/bins/` (on `PATH`) | managed directly: `executable_foo` → `~/bins/foo`, +x. Append `.tmpl` to template one |
+
+- **Fonts use Git LFS** (`.gitattributes` tracks `*.ttf/*.otf/*.ttc`) — versions large binaries cleanly and keeps them under the pre-commit large-file guard. `git lfs install` runs globally via the editors script.
+- **Empty for now:** each dir holds a `.gitkeep` placeholder (ignored, never written to `$HOME`); real files take over.
+- **`assets/` is source-only** (in `.chezmoiignore`) — the fonts script reads it from the repo instead of copying it into `$HOME`.
+- **Secret inside a script?** Don't commit it in the clear — `essentials secret-add <file>` encrypts it first.
 
 ## Daily use
 
@@ -154,3 +189,19 @@ git config hooks.allowProtected true    # e.g. let a solo repo commit to main
 All state lives in this repo. On machine A: edit → `chezmoi git -- push`.
 On machine B: `chezmoi update`. Template branches resolve OS differences, so the
 same repo just works on both.
+
+## Troubleshooting & recovery
+
+| Symptom | Fix |
+|---------|-----|
+| `chezmoi apply` failed partway | It's idempotent — just re-run `chezmoi apply`. Inspect first with `chezmoi diff`. |
+| A `run_onchange_` script won't re-run after I edited what it installs | It only re-runs when its *rendered* content changes. Force every one: `chezmoi state delete-bucket --bucket=scriptState && chezmoi apply`. |
+| A managed dotfile got hand-edited and looks wrong | `chezmoi apply` overwrites it back to repo state. To keep the local change instead: `chezmoi re-add`. |
+| A git hook is blocking a commit/push I need to land | One-off: `git commit/push --no-verify`. Skip just tests: `HOOKS_SKIP_TESTS=1 git push`. All hooks off: `essentials hooks disable`. |
+| Committing to `main` is blocked | Expected. Branch (`git switch -c feat/ROG-123-x`) or, for a solo repo, `git config hooks.allowProtected true`. |
+| New fonts don't show up | `chezmoi apply` (runs the font script). Linux: `fc-cache -f`. macOS: reopen the app. Check `~/Library/Fonts` / `~/.local/share/fonts`. |
+| `command not found` right after install | Open a new shell. Go tools live in `~/go/bin`, cargo in `~/.cargo/bin`, your scripts in `~/bins` — all added to `PATH` at login. |
+| Want zsh back as the login shell | `chsh -s "$(command -v zsh)"`, then open a new terminal. nushell stays installed. |
+| Neovim misbehaving | `nvim` → `:checkhealth`; refresh plugins with `:Lazy sync`; add language support with `:LazyExtras`. |
+| Secrets didn't decrypt | The age key must be at `~/.config/chezmoi/key.txt`. Without it, encrypted files are skipped by design (no error). |
+| Forgot a keybinding in Neovim | Press `Space` and wait — **which-key** lists every leader binding. |

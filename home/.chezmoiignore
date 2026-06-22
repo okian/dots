@@ -1,6 +1,11 @@
 {{- /* Keep platform-specific files off the wrong OS. */ -}}
 README.md
 
+{{- /* Source-only asset tree: kept in the repo, installed by a script,    */ -}}
+{{- /* never applied directly to $HOME. Plus directory placeholders.       */ -}}
+assets
+.gitkeep
+
 {{ if ne .chezmoi.os "darwin" }}
 # macOS-only configs
 Library/

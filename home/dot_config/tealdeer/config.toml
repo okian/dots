@@ -1,0 +1,10 @@
+# tealdeer (tldr) — managed by chezmoi.
+# Keeps the example pages cached locally and refreshes them automatically.
+
+[updates]
+auto_update = true
+auto_update_interval_hours = 720   # ~monthly
+
+[display]
+compact = false
+use_pager = false

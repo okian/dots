@@ -17,6 +17,12 @@ def "essentials update" [] {
   print "==> uv: install latest python (uv itself is updated by brew above)"
   try { ^uv python install }
 
+  print "==> uv tools upgrade (pytest, mypy, …)"
+  if (which uv | is-not-empty) { try { ^uv tool upgrade --all } }
+
+  print "==> npm global tools update"
+  if (which npm | is-not-empty) { try { ^npm update -g } }
+
   print "==> neovim plugin sync"
   try { ^nvim --headless "+Lazy! sync" +qa }
 

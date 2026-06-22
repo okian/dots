@@ -1,0 +1,43 @@
+#!/usr/bin/env bash
+# Install personal fonts into the OS font directory.
+#
+# Source of truth: home/assets/fonts/ — a source-only tree (in .chezmoiignore,
+# so chezmoi never writes it to $HOME). This script reads it straight from the
+# chezmoi source dir and copies the fonts into place:
+#   macOS -> ~/Library/Fonts            (auto-detected, no cache rebuild)
+#   Linux -> ~/.local/share/fonts       (+ fc-cache -f)
+# The hash manifest at the bottom makes chezmoi re-run this whenever a font
+# is added, removed, or changed.
+set -euo pipefail
+
+SRC="{{ joinPath .chezmoi.sourceDir "assets" "fonts" }}"
+[ -d "$SRC" ] || { echo "==> no fonts directory; skipping"; exit 0; }
+
+shopt -s nullglob
+fonts=("$SRC"/*.ttf "$SRC"/*.otf "$SRC"/*.ttc "$SRC"/*.TTF "$SRC"/*.OTF "$SRC"/*.TTC)
+shopt -u nullglob
+if [ "${#fonts[@]}" -eq 0 ]; then echo "==> no fonts to install"; exit 0; fi
+
+{{ if .isMac -}}
+DEST="$HOME/Library/Fonts"
+{{ else -}}
+DEST="$HOME/.local/share/fonts"
+{{ end -}}
+mkdir -p "$DEST"
+
+echo "==> Installing ${#fonts[@]} font(s) into $DEST"
+cp -f "${fonts[@]}" "$DEST/"
+
+{{ if .isLinux -}}
+if command -v fc-cache >/dev/null 2>&1; then
+  echo "==> Rebuilding font cache"
+  fc-cache -f "$DEST" >/dev/null 2>&1 || true
+fi
+{{ end -}}
+echo "==> fonts done"
+
+# --- change detection: re-run when the fonts directory changes --------------
+# (Only real fonts are listed; `*` does not match the .gitkeep placeholder.)
+{{ range (glob (joinPath .chezmoi.sourceDir "assets" "fonts" "*")) -}}
+# {{ base . }} {{ include (printf "assets/fonts/%s" (base .)) | sha256sum }}
+{{ end -}}

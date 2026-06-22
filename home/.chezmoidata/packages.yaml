@@ -9,6 +9,14 @@
 #   linux_apt     : extra apt packages for Linux GUI/desktop bits.
 #   linux_flatpak : flatpak app IDs used as a Linux GUI fallback.
 #
+# Per-language dev tools, installed by run_onchange_after_20 via each language's
+# own installer (not brew), so they match the active toolchain:
+#   go_tools     : `go install <pkg>`        -> ~/go/bin
+#   cargo_tools  : `cargo binstall`/`install` -> ~/.cargo/bin
+#   python_tools : `uv tool install <pkg>`   -> ~/.local/bin (isolated venvs)
+#   node_globals : `npm install -g <pkg>`
+# (Rust clippy/rustfmt/rust-analyzer are rustup *components*, added there too.)
+#
 # Languages with first-class version managers (rust→rustup, swift→swiftly,
 # python envs→uv) are intentionally NOT listed here; see run_onchange_after_20.
 
@@ -73,6 +81,35 @@ packages:
     - tmux
     - wget
     - tree
+    # productivity / TUIs
+    - tealdeer      # tldr: example-first man pages (`tldr tar`)
+    - just          # task runner (per-project justfile)
+    - yazi          # terminal file manager with image/video previews
+    - btop          # system monitor
+    - dust          # du replacement (disk usage)
+    - duf           # df replacement (free space)
+    - procs         # ps replacement
+    - sd            # sed replacement (find & replace)
+    - hyperfine     # command benchmarking
+    - xh            # Rust HTTPie (HTTP client)
+    - jless         # interactive JSON viewer
+    - zellij        # tmux alternative (available; tmux stays default)
+    # git extras
+    - difftastic    # structural, syntax-aware diffs (`git dft`)
+    - git-absorb    # auto-route staged hunks into fixup commits
+    # kubernetes (KUBE_EDITOR already points at nvim)
+    - kubernetes-cli  # kubectl
+    - k9s             # cluster TUI
+    # container / security
+    - trivy         # CVE + secret scanner (images, repos, IaC)
+    - dive          # inspect container image layers
+    # yazi preview helpers
+    - poppler       # PDF previews
+    - sevenzip      # archive previews / extraction
+    # media (pairs with ffmpeg + the DaVinci assets)
+    - imagemagick   # still-image swiss-army knife
+    - exiftool      # read/write media metadata
+    - yt-dlp        # download video/audio
 
   # macOS-only GUI apps (Homebrew casks). For each, see linux_flatpak for the
   # Linux equivalent. Exceptions handled elsewhere:
@@ -109,3 +146,32 @@ packages:
     - org.alacritty.Alacritty
     - com.google.Chrome
     - com.discordapp.Discord
+
+  # --- Per-language developer tools (installed by run_onchange_after_20) -----
+  # Trim freely; each list re-runs the installer when changed.
+
+  # Go: `go install <module>@<version>` -> ~/go/bin (gopls/dlv also via Mason).
+  go_tools:
+    - golang.org/x/tools/cmd/goimports@latest   # auto-import + format
+    - golang.org/x/tools/gopls@latest           # language server
+    - github.com/go-delve/delve/cmd/dlv@latest  # debugger
+    - mvdan.cc/gofumpt@latest                    # stricter gofmt
+
+  # Rust: extra cargo binaries (clippy/rustfmt/rust-analyzer are rustup components).
+  cargo_tools:
+    - cargo-edit        # cargo add/rm/upgrade
+    - cargo-nextest     # faster test runner
+    - cargo-watch       # re-run on file change
+
+  # Python: global CLIs in isolated uv-managed venvs (ruff is already in brew).
+  python_tools:
+    - pytest
+    - mypy
+    - ipython
+
+  # Node: global CLIs (editor LSPs are also managed by LazyVim/Mason).
+  node_globals:
+    - typescript
+    - prettier
+    - eslint
+    - neovim          # Node provider for Neovim (:checkhealth)

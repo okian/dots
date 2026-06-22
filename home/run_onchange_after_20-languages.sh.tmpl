@@ -51,4 +51,43 @@ if command -v uv >/dev/null 2>&1; then
   echo "==> Installing latest CPython via uv"
   uv python install || true
 fi
+
+# --- Per-language developer tools -------------------------------------------
+# Lists live in packages.yaml (go_tools / cargo_tools / python_tools /
+# node_globals); editing them re-runs this script automatically. Each install
+# is best-effort (|| true) so one bad entry never aborts provisioning.
+
+# Go -> ~/go/bin (on PATH). go/node/uv are present by now (brew, before_10).
+if command -v go >/dev/null 2>&1; then
+  echo "==> Installing Go tools"
+  {{ range .packages.go_tools -}}
+  go install {{ . | quote }} || true
+  {{ end -}}
+fi
+
+# Rust extras -> ~/.cargo/bin (binstall is fast; fall back to source build).
+if command -v cargo >/dev/null 2>&1; then
+  echo "==> Installing cargo tools"
+  {{ range .packages.cargo_tools -}}
+  cargo binstall --no-confirm {{ . | quote }} 2>/dev/null || cargo install {{ . | quote }} || true
+  {{ end -}}
+fi
+
+# Python global CLIs -> isolated uv tool venvs (shims on ~/.local/bin).
+if command -v uv >/dev/null 2>&1; then
+  echo "==> Installing Python tools"
+  {{ range .packages.python_tools -}}
+  uv tool install {{ . | quote }} || true
+  {{ end -}}
+fi
+
+# Node global CLIs.
+if command -v npm >/dev/null 2>&1; then
+  node_globals=({{ range .packages.node_globals }}{{ . | quote }} {{ end }})
+  if [ "${#node_globals[@]}" -gt 0 ]; then
+    echo "==> Installing npm global tools"
+    npm install -g "${node_globals[@]}" 2>/dev/null || true
+  fi
+fi
+
 echo "==> languages done"

@@ -1,0 +1,3 @@
+# Drop .ttf/.otf/.ttc font files here. `chezmoi apply` installs them into the
+# OS font dir (see run_onchange_after_35-fonts.sh.tmpl). This file just keeps
+# the directory in git; it is never written to $HOME.

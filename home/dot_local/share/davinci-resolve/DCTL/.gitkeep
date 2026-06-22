@@ -1,0 +1,2 @@
+# Drop DCTLs (.dctl) here. Lands at ~/.local/share/davinci-resolve/DCTL.
+# Resolve scans added LUT locations recursively, so DCTLs here are picked up too.

@@ -1,0 +1,2 @@
+# Drop LUTs (.cube/.3dl) here. Lands at ~/.local/share/davinci-resolve/LUT.
+# One-time in Resolve: Preferences -> System -> LUT -> add this folder.

@@ -1,0 +1,3 @@
+# Personal scripts. Name each file `executable_<name>` (chezmoi sets +x);
+# it lands at ~/bins/<name>, which is on PATH. Append `.tmpl` to template one.
+# This placeholder keeps the dir in git and is never written to $HOME.

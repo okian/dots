@@ -37,6 +37,15 @@
 	conflictstyle = zdiff3
 [diff]
 	colorMoved = default
+	tool = difftastic
+# Structural, syntax-aware diffs on demand via `git dft` (delta stays the
+# default pager for `git diff`/`git log`).
+[difftool]
+	prompt = false
+[difftool "difftastic"]
+	cmd = difft "$LOCAL" "$REMOTE"
+[pager]
+	difftool = true
 [pull]
 	rebase = true
 [push]
@@ -52,3 +61,4 @@
 	br = branch
 	lg = log --graph --oneline --decorate --all
 	last = log -1 HEAD --stat
+	dft = difftool          # structural diff (difftastic); `git absorb` works natively
