@@ -24,6 +24,14 @@
 (setq display-line-numbers-type 'relative)
 (setq which-key-idle-delay 0.4)
 
+;; The login shell is nushell, which isn't POSIX — Emacs spawns child processes
+;; (diff-hl, TRAMP, magit, …) via a POSIX shell, so point those at bash while
+;; keeping the interactive terminals on nushell.
+(when (executable-find "bash")
+  (setq shell-file-name (executable-find "bash")))
+(setq-default vterm-shell (executable-find "nu")
+              explicit-shell-file-name (executable-find "nu"))
+
 ;; Quieter modeline: drop the encoding/EOL indicator clutter.
 (after! doom-modeline
   (setq doom-modeline-buffer-encoding nil))

@@ -9,7 +9,7 @@
 
        :ui
        doom
-       doom-dashboard
+       dashboard
        hl-todo
        (ligatures +extra)
        modeline
