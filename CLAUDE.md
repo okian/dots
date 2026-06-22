@@ -60,6 +60,11 @@ chezmoi update                     # git pull + apply
 essentials update                  # apply + upgrade every toolchain (defined in nushell/essentials.nu)
 ```
 
+The `essentials` command (nushell) is also the user-facing wrapper over chezmoi for
+daily repo management — `essentials {edit,diff,apply,add,show,pull,save,status,cd,log,managed,doctor}`
+mirror the chezmoi commands above so users never call `chezmoi` directly. When you add a
+chezmoi workflow, add the matching `essentials` subcommand and a line to the bare-`essentials` help.
+
 There is no test suite. **Validation = CI** (`.github/workflows/ci.yml`), which you should
 mirror locally before pushing:
 1. `chezmoi init --promptDefaults` + `apply --dry-run --force --exclude=scripts,externals` — template lint.

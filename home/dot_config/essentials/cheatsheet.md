@@ -6,6 +6,26 @@ View anytime with `essentials cheatsheet` (nushell) or `cheatsheet` (zsh).
 > Shells: **nushell** is your default (vi edit mode); **zsh** is the fallback.
 > Most things below work in both; differences are noted.
 
+## Managing this setup — one command
+
+`essentials` wraps chezmoi + git so you never call them directly. Run bare
+`essentials` for the full menu. Mental model: **edit → diff → apply** locally;
+**pull ↓ / save ↑** with the remote.
+
+| Command | What it does |
+|---------|--------------|
+| `essentials edit <file>` | edit a managed file, then apply it |
+| `essentials diff` | preview pending changes to your home dir |
+| `essentials apply` | apply your local edits |
+| `essentials add <p>` | start managing a file (`--encrypt` for secrets) |
+| `essentials show <file>` | show a file's fully rendered content |
+| `essentials pull` | get latest from the remote and apply (↓) |
+| `essentials save [msg]` | stage everything, commit & push (↑) |
+| `essentials status` | uncommitted changes + pending apply |
+| `essentials update` | pull + apply + upgrade **every** toolchain |
+| `essentials cd` | jump into the dotfiles source dir |
+| `essentials managed` / `doctor` / `log` | list managed files / diagnose / history |
+
 ## Aliases
 
 | Alias | Runs | Notes |

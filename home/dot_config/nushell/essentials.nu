@@ -33,6 +33,106 @@ def "essentials update" [] {
   print "==> done. Everything is at latest."
 }
 
+# --- Repo / dotfiles management (one command, no raw chezmoi) ---------------
+# Mental model:  edit → diff → apply  (local);  pull ↓ / save ↑  (remote).
+
+def _have_chezmoi [] {
+  if (which chezmoi | is-empty) { print "✗ chezmoi is not installed on this machine."; false } else { true }
+}
+
+# Preview what applying would change in $HOME.
+def "essentials diff" [] {
+  if not (_have_chezmoi) { return }
+  ^chezmoi diff
+}
+
+# Apply your local source edits to $HOME.
+def "essentials apply" [] {
+  if not (_have_chezmoi) { return }
+  ^chezmoi apply
+  print "==> applied."
+}
+
+# Edit a managed file (edits the source, then applies it). e.g. essentials edit ~/.config/git/config
+def "essentials edit" [...file: string] {
+  if not (_have_chezmoi) { return }
+  if ($file | is-empty) { print "usage: essentials edit <file> [<file> …]"; return }
+  ^chezmoi edit --apply ...$file
+}
+
+# Show the fully rendered content a target file would have.
+def "essentials show" [file: string] {
+  if not (_have_chezmoi) { return }
+  ^chezmoi cat $file
+}
+
+# Start managing an existing file (copy it into the repo). --encrypt for secrets.
+def "essentials add" [path: string, --encrypt] {
+  if not (_have_chezmoi) { return }
+  if $encrypt { ^chezmoi add --encrypt $path } else { ^chezmoi add $path }
+  print $"==> now managing ($path)(if $encrypt { ' (encrypted)' } else { '' })."
+}
+
+# Stop managing a file (leaves it in $HOME, removes it from the repo).
+def "essentials forget" [path: string] {
+  if not (_have_chezmoi) { return }
+  ^chezmoi forget $path
+}
+
+# Pull the latest from the remote and apply (git pull + apply). The downward
+# counterpart to `save`. (`essentials update` also upgrades every toolchain.)
+def "essentials pull" [] {
+  if not (_have_chezmoi) { return }
+  ^chezmoi update
+  print "==> pulled & applied."
+}
+
+# Save ALL local repo changes upward: stage everything, commit, push.
+def "essentials save" [message?: string] {
+  if not (_have_chezmoi) { return }
+  let dirty = (^chezmoi git -- status --porcelain | complete | get stdout | str trim)
+  if ($dirty | is-empty) { print "nothing to save — the repo is clean."; return }
+  ^chezmoi git -- add -A
+  ^chezmoi git -- commit -m ($message | default "update dotfiles")
+  ^chezmoi git -- push
+  print "==> saved (committed & pushed)."
+}
+
+# Overview: repo git status + a summary of pending changes to apply.
+def "essentials status" [] {
+  if not (_have_chezmoi) { return }
+  print "── repo (uncommitted changes) ──"
+  ^chezmoi git -- status -sb
+  print ""
+  print "── pending apply (chezmoi diff) ──"
+  let d = (^chezmoi diff | complete | get stdout)
+  if ($d | str trim | is-empty) { print "  (none — $HOME matches the repo)" } else { print $d }
+}
+
+# Jump into the dotfiles source directory.
+def --env "essentials cd" [] {
+  if not (_have_chezmoi) { return }
+  cd (^chezmoi source-path | str trim)
+}
+
+# Recent commit history of the dotfiles repo.
+def "essentials log" [n: int = 15] {
+  if not (_have_chezmoi) { return }
+  ^chezmoi git -- log --oneline -n $n
+}
+
+# List every file this repo manages.
+def "essentials managed" [] {
+  if not (_have_chezmoi) { return }
+  ^chezmoi managed
+}
+
+# Diagnose the chezmoi/toolchain setup.
+def "essentials doctor" [] {
+  if not (_have_chezmoi) { return }
+  ^chezmoi doctor
+}
+
 # --- Secrets (age encryption) ----------------------------------------------
 
 # One-time: generate the age keypair on a trusted machine.
@@ -226,17 +326,35 @@ def "essentials cheatsheet" [] {
 
 # Bare `essentials` prints help.
 def "essentials" [] {
-  print "essentials — manage this machine's config, toolchains, secrets & hooks"
-  print "  essentials update            upgrade configs + all toolchains to latest"
-  print "  essentials secrets-setup     generate the age key (run once, trusted machine)"
-  print "  essentials secret-add <p>    encrypt a file & add it to the repo"
-  print "  essentials git-identity ...  per-entity git identities: sync|list|add|edit"
-  print "  essentials hooks status      show global git-hooks state"
-  print "  essentials hooks enable|disable|test"
-  print "  essentials tip | tips        random / all usage tips"
-  print "  essentials cheatsheet        open the aliases + keybindings cheatsheet"
+  print "essentials — one command to manage this machine (wraps chezmoi, git, toolchains)"
   print ""
-  print "  chezmoi edit <file>   edit a config"
-  print "  chezmoi diff          preview pending changes"
-  print "  chezmoi apply         apply local edits"
+  print "  Dotfiles (local):"
+  print "    essentials edit <file>     edit a managed file, then apply it"
+  print "    essentials diff            preview pending changes to your home dir"
+  print "    essentials apply           apply your local edits to your home dir"
+  print "    essentials add <p>         start managing a file  (--encrypt for secrets)"
+  print "    essentials forget <p>      stop managing a file"
+  print "    essentials show <file>     show a file's fully rendered content"
+  print ""
+  print "  Dotfiles (remote):"
+  print "    essentials pull            get latest from the remote and apply  (↓)"
+  print "    essentials save [msg]      stage everything, commit & push        (↑)"
+  print "    essentials status          uncommitted changes + pending apply"
+  print "    essentials log [n]         recent dotfiles commits"
+  print ""
+  print "  Maintenance:"
+  print "    essentials update          pull + apply + upgrade every toolchain"
+  print "    essentials cd              jump into the dotfiles source dir"
+  print "    essentials managed         list every managed file"
+  print "    essentials doctor          diagnose the setup"
+  print ""
+  print "  Identities, secrets & hooks:"
+  print "    essentials git-identity    per-entity git identities: list|add|edit|sync"
+  print "    essentials secrets-setup   generate the age key (once, trusted machine)"
+  print "    essentials secret-add <p>  encrypt a file & add it to the repo"
+  print "    essentials hooks           global git-hooks: status|enable|disable|test"
+  print ""
+  print "  Docs:"
+  print "    essentials cheatsheet      aliases + keybindings + workflows"
+  print "    essentials tip | tips      random / all usage tips"
 }
