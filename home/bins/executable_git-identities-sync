@@ -26,9 +26,22 @@ quiet=0
 log() { [ "$quiet" -eq 1 ] || printf '%s\n' "$*"; }
 
 repos="$HOME/repos"
+gitcfg="$HOME/.config/git/config"
 confd="$HOME/.config/git/conf.d"
 gen="$confd/identities.gitconfig"
 mkdir -p "$confd"
+
+# Self-heal: guarantee the global git config includes the generated file. This
+# normally ships baked into config.tmpl, but ensuring it here means adding an
+# entity works even on a machine whose global config predates the feature.
+# Idempotent; targets the file explicitly (not --global) so the relative
+# include path resolves against ~/.config/git/ and we never write a stray
+# ~/.gitconfig. Silent unless it actually wires the line in.
+include_rel="conf.d/identities.gitconfig"
+if ! git config --file "$gitcfg" --get-all include.path 2>/dev/null | grep -qxF "$include_rel"; then
+  git config --file "$gitcfg" --add include.path "$include_rel"
+  log "==> wired '[include] path = $include_rel' into $gitcfg"
+fi
 
 # Fallback identity for entities that don't have their own file yet.
 global_name="$(git config --global user.name 2>/dev/null || true)"

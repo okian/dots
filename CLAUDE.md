@@ -115,3 +115,6 @@ entity dir, each pointing at `conf.d/<entity>.gitconfig`. The global `git/config
 created only when missing (never clobbered) and persisted across machines as age-encrypted
 `conf.d/*.gitconfig` (gated in `.chezmoiignore` when no key); when `~/repos` is empty those
 encrypted entities are recreated as dirs. Don't hand-edit `identities.gitconfig` — it's generated.
+The generator also self-heals the global wiring: if `~/.config/git/config` lacks the
+`[include] conf.d/identities.gitconfig` line (e.g. a stale global config), it adds it idempotently
+(via `git config --file`, matching the template's format so chezmoi sees no diff).
