@@ -26,6 +26,12 @@ View anytime with `essentials cheatsheet` (nushell) or `cheatsheet` (zsh).
 |---------|--------------|
 | `ff` | fuzzy-find a file (bat preview) → open in Neovim |
 | `fcd` | fuzzy-find a directory → cd into it |
+| `mkcd <dir>` | make a directory (and parents) then cd into it |
+| `extract <file>` | extract any archive by extension (tar/gz/zip/7z/rar…) |
+| `ports` | listening TCP ports + the owning process |
+| `killp` | fuzzy-pick a running process and kill it |
+| `gcap "msg"` | git add -A → commit → push, in one shot |
+| `y` | open yazi; cd's to wherever you quit it |
 | `z <dir>` | jump to a frecent directory (zoxide); `zi` = interactive |
 | `essentials update` | upgrade configs + all toolchains to latest |
 | `essentials tip` / `tips` | random / all usage tips |
@@ -73,10 +79,27 @@ View anytime with `essentials cheatsheet` (nushell) or `cheatsheet` (zsh).
 | `prefix` `c` / `n` / `1-9` | new window / next / select |
 | `prefix` `z` | zoom pane |
 
-## WezTerm
+## WezTerm (leader = `Ctrl-Space`)
 
-Standard macOS shortcuts: `⌘T` new tab, `⌘W` close, `⌘1–9` switch tab,
-`⌘+`/`⌘-` font size, `⌘C`/`⌘V` copy/paste. Use **tmux** for splits/panes.
+Native splits/panes/tabs — themed Catppuccin Mocha, bottom tab bar shows
+`index · process · cwd`, right status shows leader/workspace/battery/clock.
+
+| Key | Action |
+|-----|--------|
+| `leader` `\|` / `-` | split vertical / horizontal |
+| `leader` `h/j/k/l` | move between panes |
+| `leader` `H/J/K/L` | resize the active pane |
+| `leader` `z` / `x` | zoom / close pane |
+| `leader` `c` / `n` / `p` / `1-9` | new tab / next / prev / jump |
+| `leader` `[` | copy mode |
+| `leader` `f` | quick-select (grab a URL/path/hash on screen) |
+| `leader` `Space` | command palette |
+| `leader` `w` | workspace switcher |
+| `⌘/Ctrl +`/`-`/`0` | font size up / down / reset |
+| `⌘/Ctrl Enter` | toggle fullscreen |
+
+The unfocused pane dims automatically. tmux still works inside WezTerm
+(prefix `Ctrl-a`) — they don't collide since the leader is `Ctrl-Space`.
 
 ## CLI tools at a glance
 
