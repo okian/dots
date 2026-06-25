@@ -1,0 +1,13 @@
+# Custom television channel — managed by chezmoi.
+# Browse tldr cheatsheets fuzzily: `tv tldr` (or pick `tldr` from the remote
+# control). Ties the tealdeer client into the fuzzy finder — list every page,
+# preview the rendered cheatsheet, Enter to print it.
+[metadata]
+name = "tldr"
+description = "Browse tldr cheatsheets (simplified, example-first man pages)"
+
+[source]
+command = "tldr --list"
+
+[preview]
+command = "tldr --color always '{}'"

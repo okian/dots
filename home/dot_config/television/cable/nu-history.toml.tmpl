@@ -1,0 +1,21 @@
+# Custom television channel — managed by chezmoi (templated). OVERRIDES tv's default.
+#
+# Why this exists: `tv init nu` binds Ctrl-R to the `nu-history` channel, but the
+# default channel runs `nu -c 'open $nu.history-path | lines'`. Two problems:
+#   1. `nu -c` does NOT load the interactive config, so $nu.history-path resolves
+#      to the plaintext default (history.txt, empty) — this setup uses sqlite
+#      (config.nu sets history.file_format = "sqlite").
+#   2. television execs the source command as argv WITHOUT a shell, so "$HOME"
+#      is never expanded — sqlite3 then can't open a literal "$HOME/…" path.
+#
+# So: query the sqlite history directly, with an absolute path baked in at apply
+# time (chezmoi .tmpl → .chezmoi.homeDir), read-only (sees the -wal, takes no
+# write lock while nushell is running), deduped and most-recent-first.
+[metadata]
+name = "nu-history"
+description = "Select from nushell's sqlite history (deduped, most recent first)"
+
+[source]
+command = "sqlite3 -readonly {{ .chezmoi.homeDir }}/.config/nushell/history.sqlite3 'SELECT command_line FROM history GROUP BY command_line ORDER BY MAX(id) DESC'"
+no_sort = true
+frecency = false

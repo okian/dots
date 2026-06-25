@@ -1,0 +1,27 @@
+# Television (`tv`) config — managed by chezmoi.
+# Docs: https://alexpasmantier.github.io/television
+#
+# `tv` is the single fuzzy finder here: `tv init {nu,zsh}` (wired in env.nu /
+# .zshrc) binds Ctrl-T (smart autocomplete) and Ctrl-R (history), replacing the
+# old fzf + atuin bindings.
+#
+# Colours follow `dots theme`: the "dots" theme is generated from the active
+# palette at ~/.config/television/themes/dots.toml by `dots theme` /
+# run_after_46-theme (same mechanism as starship/tmux). Falls back to tv's
+# bundled default until that file exists.
+
+default_channel = "files"
+history_size = 200
+
+[ui]
+ui_scale = 100
+orientation = "landscape"
+theme = "dots"
+
+[ui.input_bar]
+position = "top"
+border_type = "rounded"
+
+[ui.preview_panel]
+size = 50
+scrollbar = true

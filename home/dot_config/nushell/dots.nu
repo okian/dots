@@ -343,7 +343,7 @@ def "dots" [] {
   print "    dots log [n]         recent dotfiles commits"
   print ""
   print "  Appearance:"
-  print "    dots theme           pick a color theme (fzf) — retints every tool"
+  print "    dots theme           pick a color theme (tv) — retints every tool"
   print "    dots theme list      list themes;  dots theme set <name> to switch"
   print ""
   print "  Maintenance:"

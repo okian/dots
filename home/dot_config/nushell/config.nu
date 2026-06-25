@@ -4,7 +4,7 @@
 source ~/.config/dots/themes.nu
 
 # Active theme (set by `dots theme`; falls back to a built-in default), so the
-# nushell table colors, FZF, bat and starship all follow the chosen theme.
+# nushell table colors, television, bat and starship all follow the chosen theme.
 let theme = (_theme_active)
 let pal = $theme.palette
 
@@ -18,7 +18,7 @@ $env.config = {
   # Table/value colors, derived from the active theme palette.
   color_config: (color_config_from_palette $pal)
 
-  # Completion menu, themed to match. (History search is atuin's Ctrl-R.)
+  # Completion menu, themed to match. (History search is television's Ctrl-R.)
   menus: [
     {
       name: completion_menu
@@ -35,8 +35,13 @@ $env.config = {
   keybindings: [
     { name: completion_menu modifier: none keycode: tab mode: [vi_insert vi_normal]
       event: { until: [ { send: menu name: completion_menu } { send: menunext } ] } }
+    # Gray history autosuggestion (shown automatically, colored `hints` in the
+    # palette): → accepts the whole thing (reedline default); Ctrl-Y here too;
+    # Ctrl-→ accepts just the next word (fish-style partial accept).
     { name: accept_suggestion modifier: control keycode: char_y mode: [vi_insert]
       event: { send: historyhintcomplete } }
+    { name: accept_suggestion_word modifier: control keycode: right mode: [vi_insert vi_normal]
+      event: { send: historyhintwordcomplete } }
   ]
 
   hooks: {
@@ -51,9 +56,9 @@ $env.config = {
   }
 }
 
-# Theme-driven environment: FZF colours, bat theme, and the active starship
-# config (a palette-swapped copy of starship.toml written by `dots theme`).
-$env.FZF_DEFAULT_OPTS = (fzf_opts_from_palette $pal)
+# Theme-driven environment: bat theme and the active starship config (a
+# palette-swapped copy of starship.toml written by `dots theme`). Television's
+# colours follow the theme via a generated theme file, not an env var.
 $env.BAT_THEME = $theme.bat
 let _ss_cfg = ($nu.home-dir | path join '.config' 'dots' 'starship.toml')
 if ($_ss_cfg | path exists) { $env.STARSHIP_CONFIG = $_ss_cfg }
@@ -76,17 +81,18 @@ if (which eza | is-not-empty) {
   alias lt = eza --tree --level=2 --icons
 }
 
-# Fuzzy-find a file and open it in the editor.
+# Fuzzy-find a file (television's `files` channel: bat preview built in) and
+# open it in the editor.
 def ff [] {
-  let file = (^fd --type f --hidden --follow --exclude .git
-    | ^fzf --preview 'bat --color=always --style=numbers {} 2>/dev/null' | str trim)
+  let file = (^tv files | str trim)
   if ($file | is-not-empty) { ^$env.EDITOR $file }
 }
 
-# Fuzzy-find a directory and cd into it.
+# Fuzzy-find a directory and cd into it (fd feeds television via stdin; tree
+# preview from the `dirs` channel definition shipped in config).
 def --env fcd [] {
   let dir = (^fd --type d --hidden --follow --exclude .git
-    | ^fzf --preview 'eza --tree --level=2 --color=always {}' | str trim)
+    | ^tv --preview-command 'eza --tree --level=2 --color=always {}' | str trim)
   if ($dir | is-not-empty) { cd $dir }
 }
 
@@ -142,11 +148,11 @@ def ports [] {
   | sort-by address
 }
 
-# Fuzzy-pick a running process and kill it.
+# Fuzzy-pick a running process and kill it (television reads the list on stdin).
 def killp [] {
   let pid = (ps | each { |p| $"($p.pid)\t($p.name)" }
     | str join (char nl)
-    | ^fzf --with-nth=2.. | split row "\t" | first | str trim)
+    | ^tv | split row "\t" | first | str trim)
   if ($pid | is-not-empty) { kill $pid }
 }
 
@@ -157,8 +163,9 @@ def gcap [message: string] {
   git push
 }
 
-# starship / zoxide / carapace / atuin are auto-sourced from the vendor autoload
-# dir populated by env.nu — no manual `source` needed here.
+# starship / zoxide / carapace / television (tv) are auto-sourced from the vendor
+# autoload dir populated by env.nu — no manual `source` needed here. tv binds
+# Ctrl-T (smart autocomplete) and Ctrl-R (history).
 
 # `dots` commands (update, secrets, hooks, tips, cheatsheet).
 source ~/.config/nushell/dots.nu

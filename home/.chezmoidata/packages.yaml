@@ -34,17 +34,16 @@ packages:
     - zsh-autosuggestions
     - zsh-fast-syntax-highlighting
     - starship
-    # shell UX: completions, dir env, history sync
+    # shell UX: completions, dir env
     - carapace
     - direnv
-    - atuin
     # editors
     - neovim
     # (GUI Emacs is per-OS: emacs-plus@30 on macOS — see mac_brew_formulae,
     #  built with native-comp + HarfBuzz so Doom ligatures work — and apt emacs
     #  on Linux. Both ship the emacs/emacsclient CLI Doom needs.)
     # fuzzy finding + navigation
-    - fzf
+    - television    # `tv` — fuzzy finder TUI; owns Ctrl-R/Ctrl-T (replaces fzf+atuin)
     - zoxide
     - ripgrep
     - fd

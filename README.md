@@ -20,13 +20,13 @@ your git name/email, then applies all dotfiles and runs the provisioning scripts
 | Category    | Tools |
 |-------------|-------|
 | Shell       | **nushell** (default login shell), zsh (fallback), starship prompt |
-| Shell UX    | carapace (completions), atuin (history), direnv, fzf, zoxide |
+| Shell UX    | carapace (completions), direnv, zoxide, television (history/autocomplete on Ctrl-R/Ctrl-T) |
 | Editors     | **neovim + LazyVim**, **Doom Emacs**, tmux (+ tpm) |
 | Languages   | rust (rustup), swift (swiftly), go, python (+ uv), node |
 | Dev tools   | per-language LSPs/linters/formatters: clippy·rustfmt·rust-analyzer, goimports·gopls·dlv·gofumpt, pytest·mypy, prettier·eslint·tsc (see `go_tools`/`cargo_tools`/`python_tools`/`node_globals` in `packages.yaml`) |
 | Terminal    | **wezterm** |
 | Containers  | **podman** (rootless; `podman machine` on macOS) — no Docker Desktop; `docker`→`podman` shim |
-| Fuzzy/nav   | fzf, zoxide, ripgrep, fd, bat, eza, **yazi** (file manager w/ previews) |
+| Fuzzy/nav   | **television** (`tv`, fuzzy finder w/ channels), zoxide, ripgrep, fd, bat, eza, **yazi** (file manager w/ previews) |
 | Modern CLI  | tldr (tealdeer), just, btop, dust/duf/procs, sd, hyperfine, xh, jless |
 | Git         | git, git-delta, lazygit, gh, **difftastic** (`git dft`), **git-absorb**, global ignore + commit template |
 | Containers  | podman, podman-compose, **dive**, **trivy** (CVE/secret scan) |
@@ -48,7 +48,7 @@ A few deliberate choices, so the "why" survives:
   each language gets its first-class, always-current toolchain. (`mise` is the unified
   alternative; chosen against on purpose.)
 - **podman over Docker Desktop** — rootless, daemonless, no licensing; `docker` is shimmed to it.
-- **One theme everywhere** — Catppuccin Mocha across WezTerm, tmux, Neovim, and fzf.
+- **One theme everywhere** — Catppuccin Mocha across WezTerm, tmux, Neovim, and television.
 - **`packages.yaml` is the single source of truth** — add a tool there, never in an ad-hoc script.
 - **Hooks enforce hygiene globally** (secret scan, protected branches, format/lint/test) with
   easy, explicit bypasses.
@@ -56,7 +56,7 @@ A few deliberate choices, so the "why" survives:
 ## Docs & tips
 
 Everything is integrated around a few habits — `nvim` is the editor everywhere,
-`fzf`/`fd`/`rg`/`zoxide` for finding things, `lazygit`/`delta` for git.
+`tv`/`fd`/`rg`/`zoxide` for finding things, `lazygit`/`delta` for git.
 
 - **Cheatsheet** — aliases, keybindings, tool reference:
   [`home/dot_config/dots/cheatsheet.md`](home/dot_config/dots/cheatsheet.md)

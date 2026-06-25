@@ -8,8 +8,8 @@ patterns, not rules — steal what fits.
 - **Don't `cd` by hand across the tree.** Use `z` (zoxide): after visiting a
   directory once, `z proj`, `z ess`, `z dot` jump straight there by a fragment of
   the path. `zi` gives an interactive picker when several match.
-- **Fuzzy-jump when you don't remember the name:** `fcd` (both shells) or `Alt-C`
-  (zsh) opens an fzf picker of subdirectories with a tree preview.
+- **Fuzzy-jump when you don't remember the name:** `fcd` (both shells) opens a
+  television picker of subdirectories with a tree preview.
 - **Stay in one terminal with tmux.** One session per project; `prefix |` / `prefix -`
   to split. `Ctrl-h/j/k/l` moves seamlessly between tmux panes *and* Neovim splits.
   Detach with `prefix d`, reattach later with `tmux a` — your layout survives.
@@ -22,13 +22,15 @@ A two-step rhythm beats scrolling: **filter to candidates, then act.**
 - **Content search:** `rg "pattern"` — fast, respects `.gitignore`. Scope by type
   (`rg -t rust TODO`), show context (`-C3`), list files only (`-l`).
 - **Filename search:** `fd name` — skips `.git` and ignored files by default.
-- **History:** `Ctrl-R` (atuin) — fuzzy, deduped, synced. Type any fragment of a
-  command you ran days ago. Far better than arrow-up spamming.
-- **Find-then-edit in one move:** `ff` lists files through fzf with a bat preview
-  and opens your pick in Neovim. For content, do it inside the editor:
-  `nvim` then `<leader>/` greps the whole project and jumps you to the hit.
-- **Pipe into fzf** whenever a command spits a long list:
-  `git branch | fzf`, `brew leaves | fzf`, `rg -l TODO | fzf`.
+- **History:** `Ctrl-R` (television) — fuzzy, filters as you type. Type any
+  fragment of a command you ran days ago. Far better than arrow-up spamming.
+  `Ctrl-T` fuzzy-completes the command you're typing.
+- **Find-then-edit in one move:** `ff` lists files through television with a bat
+  preview and opens your pick in Neovim. For content, `tv text` greps and prints,
+  or do it inside the editor: `nvim` then `<leader>/` (or `<leader>tw`).
+- **Pipe into `tv`** whenever a command spits a long list:
+  `git branch | tv`, `brew leaves | tv`, `rg -l TODO | tv`.
+- **Cheatsheets:** `tv tldr` fuzzy-browses tldr pages; `tldr <cmd>` prints one.
 
 ## Editing
 
@@ -77,7 +79,7 @@ A two-step rhythm beats scrolling: **filter to candidates, then act.**
 
 ```sh
 z api && ff                  # jump to a project, fuzzy-open a file in nvim
-rg -l "TODO" | fzf | xargs nvim   # pick among files containing TODO, edit it
+rg -l "TODO" | tv | xargs nvim   # pick among files containing TODO, edit it
 git switch -c fix/ROG-22-null && lg   # branch, then stage+commit in lazygit
 chezmoi edit ~/.zshrc && chezmoi apply  # tweak a dotfile and apply it
 ```

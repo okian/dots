@@ -131,7 +131,7 @@ NOT-chezmoi-managed files under `~/.config/dots/` (`theme`, `palette.json`, `act
 `starship.toml`) + `~/.config/tmux/active-theme.conf`, then live-reloads. Each tool reads those with a
 built-in fallback, so nothing breaks before first use:
 - **WezTerm** reads `palette.json` → `config.colors`, and `add_to_config_reload_watch_list` makes it hot-reload.
-- **nushell** `config.nu` reads the active palette (`_theme_active`) → `color_config` + FZF/`BAT_THEME`/`STARSHIP_CONFIG`.
+- **nushell** `config.nu` reads the active palette (`_theme_active`) → `color_config` + `BAT_THEME`/`STARSHIP_CONFIG`; television reads a generated `~/.config/television/themes/dots.toml`.
 - **zsh** sources `active-theme.sh`; **tmux** sources `active-theme.conf`; **starship** points `STARSHIP_CONFIG` at the palette-swapped copy (the committed `starship.toml` holds all `[palettes.*]`, stays clean).
 - **Neovim** (`plugins/colorscheme.lua`) and **Doom** (`config.el`) read the slug and map it to a real colorscheme; all theme plugins are installed.
 `run_after_46-theme` regenerates the active files on every apply (so they exist + re-assert after chezmoi

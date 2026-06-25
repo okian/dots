@@ -24,8 +24,10 @@ require("lazy").setup({
     { import = "lazyvim.plugins.extras.lang.python" },
     { import = "lazyvim.plugins.extras.lang.clangd" },
     { import = "lazyvim.plugins.extras.lang.json" },
-    -- Tooling extras
-    { import = "lazyvim.plugins.extras.editor.fzf" },
+    -- Tooling extras. No fuzzy-finder extra: LazyVim's built-in snacks.picker is
+    -- the in-editor finder (needs no extra binary), and `tv` (television) is
+    -- wired in via config/keymaps.lua (<leader>tv / <leader>tw) as the
+    -- terminal-style fuzzy finder — matching the shell, where tv replaced fzf.
     { import = "lazyvim.plugins.extras.formatting.prettier" },
     -- Your own overrides
     { import = "plugins" },

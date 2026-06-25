@@ -14,9 +14,11 @@ Ctrl-h/j/k/l moves between tmux panes AND Neovim splits seamlessly — no prefix
 # --- searching ---
 `rg <pattern>` searches file contents fast; add `-t go` / `-t rust` to scope by language.
 `fd <name>` finds files by name (respects .gitignore, skips .git).
-Press Ctrl-R for fuzzy, synced shell history (atuin) — type any part of an old command.
-`ff` fuzzy-finds a file and opens it in Neovim with a bat preview.
-In Neovim: `<space>ff` finds files, `<space>/` greps the project, `<space>fb` lists buffers.
+Press Ctrl-R for fuzzy shell-history search (television) — type any fragment of an old command, then ↑/↓ + Enter to run it.
+Press Ctrl-T to fuzzy-complete the current command (television) — files, branches, processes, depending on context.
+`tv` opens the fuzzy finder; `tv text` greps file contents, `tv tldr` browses cheatsheets, and any list pipes in: `git branch | tv`.
+`ff` fuzzy-finds a file and opens it in Neovim; `fcd` jumps into a directory (both via television).
+In Neovim: `<space>ff` finds files, `<space>/` greps the project, `<space>tv` opens the television picker.
 
 # --- editing ---
 Neovim is $EDITOR everywhere — git, kubectl, and `fc` all open in nvim.

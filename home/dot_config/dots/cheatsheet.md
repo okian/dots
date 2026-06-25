@@ -28,8 +28,8 @@ View anytime with `dots cheatsheet` (nushell) or `cheatsheet` (zsh).
 
 ## Color themes — one command, everywhere
 
-`dots theme` retints WezTerm, Neovim, Doom Emacs, nushell, FZF, bat, tmux and
-starship together. Built-in: **catppuccin-mocha**, **nord**, **tokyo-night**,
+`dots theme` retints WezTerm, Neovim, Doom Emacs, nushell, television, bat, tmux
+and starship together. Built-in: **catppuccin-mocha**, **nord**, **tokyo-night**,
 **gruvbox-dark**.
 
 | Command | What it does |
@@ -108,9 +108,10 @@ How it wires up (no manual editing needed):
 
 | Key | Action | Where |
 |-----|--------|-------|
-| `Ctrl-R` | fuzzy, synced history search (atuin) | both |
-| `Ctrl-T` | insert a file path (fzf + bat preview) | zsh (use `ff` in nushell) |
-| `Alt-C` | cd into a subdirectory (fzf) | zsh (use `fcd` in nushell) |
+| `Ctrl-R` | fuzzy history search (television) — filters as you type, Enter to run | both |
+| `Ctrl-T` | smart autocomplete for the current command (television) | both |
+| `ff` / `fcd` | fuzzy-find a file to edit / dir to cd (television) | both |
+| `tv` | open the fuzzy finder; `tv text` greps, `tv tldr` browses cheatsheets | both |
 | `Esc` then `k`/`j`/`/` | vi-mode: normal mode, search history | both |
 | `→` / `Ctrl-F` | accept autosuggestion | zsh |
 
@@ -118,8 +119,9 @@ How it wires up (no manual editing needed):
 
 | Key | Action |
 |-----|--------|
-| `<leader>ff` | find files | 
+| `<leader>ff` | find files (snacks.picker) | 
 | `<leader>/` | grep across the project |
+| `<leader>tv` / `<leader>tw` | television: find files / grep text (same `tv` UI as the shell) |
 | `<leader>fb` | switch buffer |
 | `<leader>e` | toggle file explorer (neo-tree) |
 | `<leader>gg` | open lazygit |
@@ -172,7 +174,7 @@ The unfocused pane dims automatically. tmux still works inside WezTerm
 |------|------|---------|
 | find files by name | `fd` | `fd config` |
 | search file contents | `rg` (ripgrep) | `rg "func main" -t go` |
-| fuzzy filter anything | `fzf` | `... | fzf` |
+| fuzzy filter anything | `tv` (television) | `... | tv` |
 | view a file | `bat` | `bat src/main.rs` |
 | list / tree | `eza` | `eza --tree` |
 | jump dirs | `zoxide` | `z proj` |
@@ -184,6 +186,7 @@ The unfocused pane dims automatically. tmux still works inside WezTerm
 | containers | `podman` | `docker run ...` (aliased) |
 | secrets | `chezmoi` + `age` | `dots secret-add <f>` |
 | example-first help | `tldr` (tealdeer) | `tldr ffmpeg` |
+| browse cheatsheets fuzzily | `tv tldr` | pick a page, preview rendered |
 | task runner | `just` | `just` lists recipes; `just build` |
 | file manager | `yazi` | `y` (cd's to where you quit) |
 | system monitor | `btop` | `btop` (also `top`) |

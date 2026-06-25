@@ -26,23 +26,15 @@ autoload -Uz compinit && compinit
 bindkey -v
 zstyle ':completion:*' matcher-list 'm:{a-zA-Z}={A-Za-z}'
 
-# fzf: drive with fd; bat/eza previews on Ctrl-T (files) and Alt-C (dirs).
-if command -v fd >/dev/null; then
-  export FZF_DEFAULT_COMMAND='fd --type f --hidden --follow --exclude .git'
-  export FZF_CTRL_T_COMMAND="$FZF_DEFAULT_COMMAND"
-  export FZF_ALT_C_COMMAND='fd --type d --hidden --follow --exclude .git'
-  export FZF_CTRL_T_OPTS="--preview 'bat --color=always --style=numbers {} 2>/dev/null || eza --tree --color=always {}'"
-  export FZF_ALT_C_OPTS="--preview 'eza --tree --level=2 --color=always {}'"
-fi
-
-# Active theme: FZF_DEFAULT_OPTS colours, BAT_THEME, STARSHIP_CONFIG — written
-# by `dots theme` and shared with nushell. `-r` test so a fresh machine is fine.
+# Active theme: BAT_THEME, STARSHIP_CONFIG — written by `dots theme` and shared
+# with nushell. `-r` test so a fresh machine is fine. (Television's colours
+# follow the theme via ~/.config/television/themes/dots.toml, not env.)
 [ -r ~/.config/dots/active-theme.sh ] && . ~/.config/dots/active-theme.sh
 
-# Fuzzy-find a file and open it in $EDITOR.
-ff() { local f; f=$(fd --type f --hidden --follow --exclude .git | fzf --preview 'bat --color=always --style=numbers {} 2>/dev/null'); [ -n "$f" ] && ${EDITOR:-nvim} "$f"; }
-# Fuzzy-find a directory and cd into it.
-fcd() { local d; d=$(fd --type d --hidden --follow --exclude .git | fzf --preview 'eza --tree --level=2 --color=always {}'); [ -n "$d" ] && cd "$d"; }
+# Fuzzy-find a file (television `files` channel, bat preview) and open it.
+ff() { local f; f=$(tv files); [ -n "$f" ] && ${EDITOR:-nvim} "$f"; }
+# Fuzzy-find a directory and cd into it (fd feeds television on stdin).
+fcd() { local d; d=$(fd --type d --hidden --follow --exclude .git | tv --preview-command 'eza --tree --level=2 --color=always {}'); [ -n "$d" ] && cd "$d"; }
 # `y` opens yazi and cd's to wherever you quit it (`command cat` dodges the bat
 # alias; preserves yazi/cd exit status and always removes the temp file).
 y() {
@@ -70,12 +62,9 @@ alias docker='podman' docker-compose='podman-compose' dc='podman-compose'
 command -v starship >/dev/null && eval "$(starship init zsh)"
 command -v zoxide   >/dev/null && eval "$(zoxide init zsh)"
 command -v direnv   >/dev/null && eval "$(direnv hook zsh)"
-command -v atuin    >/dev/null && eval "$(atuin init zsh)"
 command -v carapace >/dev/null && { export CARAPACE_BRIDGES='zsh,fish,bash'; source <(carapace _carapace zsh); }
-[ -f "$(brew --prefix 2>/dev/null)/opt/fzf/shell/key-bindings.zsh" ] && \
-  source "$(brew --prefix)/opt/fzf/shell/key-bindings.zsh"
-[ -f "$(brew --prefix 2>/dev/null)/opt/fzf/shell/completion.zsh" ] && \
-  source "$(brew --prefix)/opt/fzf/shell/completion.zsh"
+# television: Ctrl-T (smart autocomplete) + Ctrl-R (history) — replaces fzf+atuin.
+command -v tv       >/dev/null && eval "$(tv init zsh)"
 
 # zsh-autosuggestions + fast-syntax-highlighting (load highlighting LAST)
 _brew_prefix="$(brew --prefix 2>/dev/null)"
