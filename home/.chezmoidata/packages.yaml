@@ -86,6 +86,11 @@ packages:
     - wget
     - tree
     # productivity / TUIs
+    - zellij        # detachable terminal sessions (SSH/remote, long-running
+                    #   jobs). NOT the day-to-day multiplexer — WezTerm owns
+                    #   splits/panes/tabs natively with one nav idiom (see
+                    #   wezterm.lua). Reach for zellij when a session must
+                    #   survive a disconnect.
     - tealdeer      # tldr: example-first man pages (`tldr tar`)
     - just          # task runner (per-project justfile)
     - yazi          # terminal file manager with image/video previews

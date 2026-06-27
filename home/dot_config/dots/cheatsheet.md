@@ -28,9 +28,9 @@ View anytime with `dots cheatsheet`.
 
 ## Color themes — one command, everywhere
 
-`dots theme` retints WezTerm, Neovim, Doom Emacs, nushell, television, bat
-and starship together. Built-in: **catppuccin-mocha**, **nord**, **tokyo-night**,
-**gruvbox-dark**.
+`dots theme` retints WezTerm, Neovim, Doom Emacs, nushell, television, lazygit,
+bat and starship together. Built-in: **catppuccin-mocha**, **nord**,
+**tokyo-night**, **gruvbox-dark**.
 
 | Command | What it does |
 |---------|--------------|

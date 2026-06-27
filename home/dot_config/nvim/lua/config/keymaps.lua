@@ -55,12 +55,7 @@ local function tv_run(args, on_pick)
     end
   end
 
-  -- Prefer the modern jobstart terminal API (nvim 0.11+); fall back to termopen.
-  if vim.fn.has("nvim-0.11") == 1 then
-    vim.fn.jobstart(cmd, { term = true, on_exit = finish })
-  else
-    vim.fn.termopen(cmd, { on_exit = finish })
-  end
+  vim.fn.jobstart(cmd, { term = true, on_exit = finish })
   vim.cmd("startinsert")
 end
 

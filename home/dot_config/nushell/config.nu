@@ -146,7 +146,7 @@ def extract [file: path] {
   } else if ($name | str ends-with ".zip") {
     ^unzip $file
   } else if ($name | str ends-with ".7z") or ($name | str ends-with ".rar") {
-    ^7z x $file
+    ^7zz x $file
   } else {
     error make { msg: $"don't know how to extract ($file)" }
   }
