@@ -1,0 +1,22 @@
+#!/usr/bin/env bash
+# Seed CLI caches once on a fresh machine (best-effort, never hard-fails):
+#   * tldr (tealdeer) page cache — `tldr <cmd>` + the tv `tldr` channel work
+#     offline immediately; tealdeer keeps it fresh (auto_update in its config).
+#   * television cable channels — files/text/git-*/env/… for tv, ff/fcd, the
+#     Ctrl-R/Ctrl-T bindings and the nvim picker. Our chezmoi-managed channels
+#     are applied first; `tv update-channels` skips existing files, so ours win.
+set -euo pipefail
+
+{{ template "brew-shellenv.sh" . }}
+
+if command -v tldr >/dev/null 2>&1; then
+  echo "==> Seeding tldr cache"
+  tldr --update || echo "    tldr --update failed (offline?); will retry on first use"
+fi
+
+if command -v tv >/dev/null 2>&1; then
+  echo "==> Downloading television cable channels"
+  tv update-channels || echo "    tv update-channels failed (offline?); run 'tv update-channels' later"
+fi
+
+echo "==> caches seeded"

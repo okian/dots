@@ -109,15 +109,15 @@ shared helpers and config resolution (`git config hooks.<key>` overrides
 
 ## Per-entity git identities
 
-Each top-level dir under `~/repos` is an "entity" (work/personal/NGO) with its own git
+Each top-level dir under `~/projects` is an "entity" (work/personal/NGO) with its own git
 identity. `home/bins/executable_git-identities-sync` (installed to `~/bins`, on PATH) regenerates
-`~/.config/git/conf.d/identities.gitconfig` — one `[includeIf "gitdir:~/repos/<entity>/"]` per
+`~/.config/git/conf.d/identities.gitconfig` — one `[includeIf "gitdir:~/projects/<entity>/"]` per
 entity dir, each pointing at `conf.d/<entity>.gitconfig`. The global `git/config.tmpl` ends with
 `[include] conf.d/identities.gitconfig` so a matching entity's `[user]` overrides the global one.
 `run_after_45-git-identities` (a plain `run_`, so it runs **every** apply) invokes the generator;
 `dots git-identity {sync,list,add,edit}` are the nushell front-ends. Per-entity files are
 created only when missing (never clobbered) and persisted across machines as age-encrypted
-`conf.d/*.gitconfig` (gated in `.chezmoiignore` when no key); when `~/repos` is empty those
+`conf.d/*.gitconfig` (gated in `.chezmoiignore` when no key); when `~/projects` is empty those
 encrypted entities are recreated as dirs. Don't hand-edit `identities.gitconfig` — it's generated.
 The generator also self-heals the global wiring: if `~/.config/git/config` lacks the
 `[include] conf.d/identities.gitconfig` line (e.g. a stale global config), it adds it idempotently
@@ -128,12 +128,13 @@ The generator also self-heals the global wiring: if `~/.config/git/config` lacks
 `home/dot_config/dots/themes.nu` is the registry (slug → display name, per-tool ids, a 14-colour
 palette) **and** the `dots theme {list,set,pick}` commands. `dots theme set <slug>` writes generated,
 NOT-chezmoi-managed files under `~/.config/dots/` (`theme`, `palette.json`, `active-theme.sh`,
-`starship.toml`) + `~/.config/tmux/active-theme.conf`, then live-reloads. Each tool reads those with a
-built-in fallback, so nothing breaks before first use:
+`starship.toml`) + `~/.config/television/themes/dots.toml`, then live-reloads. Each tool reads those
+with a built-in fallback, so nothing breaks before first use:
 - **WezTerm** reads `palette.json` → `config.colors`, and `add_to_config_reload_watch_list` makes it hot-reload.
 - **nushell** `config.nu` reads the active palette (`_theme_active`) → `color_config` + `BAT_THEME`/`STARSHIP_CONFIG`; television reads a generated `~/.config/television/themes/dots.toml`.
-- **zsh** sources `active-theme.sh`; **tmux** sources `active-theme.conf`; **starship** points `STARSHIP_CONFIG` at the palette-swapped copy (the committed `starship.toml` holds all `[palettes.*]`, stays clean).
+- **zsh** sources `active-theme.sh`; **starship** points `STARSHIP_CONFIG` at the palette-swapped copy (the committed `starship.toml` holds all `[palettes.*]`, stays clean).
 - **Neovim** (`plugins/colorscheme.lua`) and **Doom** (`config.el`) read the slug and map it to a real colorscheme; all theme plugins are installed.
 `run_after_46-theme` regenerates the active files on every apply (so they exist + re-assert after chezmoi
-rewrites managed configs). To add a theme: add a registry entry (palette + nvim/doom/bat/starship ids), a
-`[palettes.<id>]` block in `starship.toml`, and ensure the nvim plugin + Doom theme exist.
+rewrites managed configs). To add a theme: add a registry entry (palette + nvim/doom/bat/starship ids) and
+ensure the nvim plugin + Doom theme exist — the starship `[palettes.<id>]` block is generated from the
+registry (only the catppuccin fallback block lives in the committed `starship.toml`).

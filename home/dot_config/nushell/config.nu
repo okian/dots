@@ -102,8 +102,8 @@ def --env fcd [] {
 # Neovim's LSP symbol search.
 def fsym [] { ^tv symbols }
 
-# Pick a git project under ~/repos or ~/projects and cd into it (television's
-# `projects` channel; Ctrl-S inside jumps to that repo's symbols, Ctrl-E edits).
+# Pick a git project under ~/projects and cd into it (television's `projects`
+# channel; Ctrl-S inside jumps to that repo's symbols, Ctrl-E edits).
 def --env proj [] {
   let dir = (^tv projects | str trim)
   if ($dir | is-not-empty) { cd $dir }

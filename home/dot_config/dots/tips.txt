@@ -5,11 +5,10 @@
 # --- moving around ---
 `z <part-of-path>` jumps to a frecent directory (zoxide). `zi` picks interactively.
 `fcd` fuzzy-finds a directory and cd's into it. `cd -` toggles back.
-Press Alt-C to fuzzy-cd into a subdirectory; Ctrl-T to insert a file path.
 `lt` shows a 2-level tree (eza); `ll` is a detailed list with icons.
-In tmux: prefix is Ctrl-a. `|` splits vertical, `-` splits horizontal, prefix+r reloads.
-Ctrl-h/j/k/l moves between tmux panes AND Neovim splits seamlessly — no prefix.
-`tmux a` reattaches your last session; `prefix d` detaches without losing layout.
+WezTerm is the multiplexer: `Ctrl-Space \` splits horizontal, `Ctrl-Space -` vertical.
+Ctrl-h/j/k/l moves between WezTerm panes AND Neovim splits seamlessly — no leader.
+`Ctrl-Space z` zooms a pane; `Ctrl-Space w` switches workspaces.
 
 # --- searching ---
 `rg <pattern>` searches file contents fast; add `-t go` / `-t rust` to scope by language.
@@ -19,8 +18,8 @@ Press Ctrl-T to fuzzy-complete the current command (television) — files, branc
 `tv` opens the fuzzy finder; `tv text` greps file contents, `tv tldr` browses cheatsheets, and any list pipes in: `git branch | tv`.
 `ff` fuzzy-finds a file and opens it in Neovim; `fcd` jumps into a directory (both via television).
 `fsym` (or `tv symbols`) fuzzy-searches code symbols — classes/funcs/vars via universal-ctags — and opens the pick in Neovim at its line.
-`proj` (or `tv projects`) picks a git repo under ~/repos or ~/projects and cd's in; Ctrl-S jumps straight to that repo's symbols.
-In Neovim: `<space>ff` finds files, `<space>/` greps the project, `<space>tv` opens the television picker.
+`proj` (or `tv projects`) picks a git repo under ~/projects and cd's in; Ctrl-S jumps straight to that repo's symbols.
+In Neovim: `<space>ff` finds files, `<space>/` greps the project, `<space>fv`/`<space>sv` open the television picker.
 
 # --- editing ---
 Neovim is $EDITOR everywhere — git, kubectl, and `fc` all open in nvim.

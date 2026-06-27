@@ -26,9 +26,10 @@
     (setq catppuccin-flavor (intern (nth 2 entry))))
   (setq doom-theme (nth 1 entry)))
 
-;; Subtle frame transparency to echo the WezTerm window (opacity 0.97).
-;; Ignored gracefully on builds without alpha-background support.
-(add-to-list 'default-frame-alist '(alpha-background . 97))
+;; Frame transparency matched to the WezTerm window (opacity 0.85) so the GUI
+;; Emacs frame reads the same. Ignored gracefully on builds without
+;; alpha-background support.
+(add-to-list 'default-frame-alist '(alpha-background . 85))
 
 ;; ── Editor UX ───────────────────────────────────────────────────────────────
 (setq display-line-numbers-type 'relative)

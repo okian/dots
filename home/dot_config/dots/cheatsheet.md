@@ -1,10 +1,10 @@
 # dots — cheatsheet
 
 Quick reference for the aliases, commands, and keybindings this setup ships.
-View anytime with `dots cheatsheet` (nushell) or `cheatsheet` (zsh).
+View anytime with `dots cheatsheet`.
 
-> Shells: **nushell** is your default (vi edit mode); **zsh** is the fallback.
-> Most things below work in both; differences are noted.
+> Shells: **nushell** is your default (vi edit mode); **zsh** is a lean
+> fallback (shared env, theme and aliases — the `tv` helpers live only in nu).
 
 ## Managing this setup — one command
 
@@ -28,7 +28,7 @@ View anytime with `dots cheatsheet` (nushell) or `cheatsheet` (zsh).
 
 ## Color themes — one command, everywhere
 
-`dots theme` retints WezTerm, Neovim, Doom Emacs, nushell, television, bat, tmux
+`dots theme` retints WezTerm, Neovim, Doom Emacs, nushell, television, bat
 and starship together. Built-in: **catppuccin-mocha**, **nord**, **tokyo-night**,
 **gruvbox-dark**.
 
@@ -38,7 +38,7 @@ and starship together. Built-in: **catppuccin-mocha**, **nord**, **tokyo-night**
 | `dots theme list` | list themes (● = active) |
 | `dots theme set nord` | switch everything to Nord |
 
-WezTerm, tmux, and a running Emacs daemon retint **instantly**; starship updates
+WezTerm and a running Emacs daemon retint **instantly**; starship updates
 next prompt; new nushell/Neovim pick it up (`exec nu` to retint the current
 shell, `:colorscheme <name>` for a running nvim). The choice lives in
 `~/.config/dots/` and survives `dots pull`/`update`.
@@ -64,7 +64,7 @@ shell, `:colorscheme <name>` for a running nvim). The choice lives in
 | `ff` | fuzzy-find a file (bat preview) → open in Neovim |
 | `fcd` | fuzzy-find a directory → cd into it |
 | `fsym` | fuzzy-search code symbols (classes/funcs/vars, ctags) → open at line |
-| `proj` | fuzzy-pick a git repo under ~/repos or ~/projects → cd in (Ctrl-S: its symbols) |
+| `proj` | fuzzy-pick a git repo under ~/projects → cd in (Ctrl-S: its symbols) |
 | `mkcd <dir>` | make a directory (and parents) then cd into it |
 | `extract <file>` | extract any archive by extension (tar/gz/zip/7z/rar…) |
 | `ports` | listening TCP ports + the owning process |
@@ -79,19 +79,19 @@ shell, `:colorscheme <name>` for a running nvim). The choice lives in
 | `dots secret-add <p>` | encrypt a file & stage it into the repo |
 | `dots git-identity …` | per-entity git identities (see below) |
 
-## Per-entity git identities (`~/repos/<entity>/`)
+## Per-entity git identities (`~/projects/<entity>/`)
 
-Each top-level directory under `~/repos` is an **entity** (work, personal, NGO…)
+Each top-level directory under `~/projects` is an **entity** (work, personal, NGO…)
 with its own git name/email/signing key. Any repo cloned under
-`~/repos/cuju/` automatically commits as your *cuju* identity; anything outside
-`~/repos` uses the global identity.
+`~/projects/cuju/` automatically commits as your *cuju* identity; anything outside
+`~/projects` uses the global identity.
 
 | Command | What it does |
 |---------|--------------|
-| `dots git-identity add <entity> <email> [name]` | create the identity, make `~/repos/<entity>/`, then **encrypt + commit + push** |
+| `dots git-identity add <entity> <email> [name]` | create the identity, make `~/projects/<entity>/`, then **encrypt + commit + push** |
 | `dots git-identity edit <entity>` | edit in `$EDITOR`; if changed, **re-encrypt + commit + push** |
 | `dots git-identity list` | show each entity's resolved name/email + whether its dir exists |
-| `dots git-identity sync` | regenerate the `includeIf` blocks from `~/repos` |
+| `dots git-identity sync` | regenerate the `includeIf` blocks from `~/projects` |
 
 `add`/`edit` are fully automated — one command writes the identity, encrypts it
 into the repo, asserts the ciphertext leaks no plaintext (aborts otherwise),
@@ -100,10 +100,10 @@ commits only that `.age` file, and pushes. Pass `--no-push` to stop before push.
 How it wires up (no manual editing needed):
 - `~/.config/git/config` ends with `[include] conf.d/identities.gitconfig`.
 - `~/bins/git-identities-sync` regenerates that file on **every** `chezmoi apply`
-  with one `[includeIf "gitdir:~/repos/<entity>/"]` per entity dir.
+  with one `[includeIf "gitdir:~/projects/<entity>/"]` per entity dir.
 - Per-entity files live at `~/.config/git/conf.d/<entity>.gitconfig`, persisted
   encrypted as `conf.d/encrypted_<entity>.gitconfig.age` in the repo.
-- On a fresh machine with no `~/repos`, the entities you've encrypted are
+- On a fresh machine with no `~/projects`, the entities you've encrypted are
   recreated as directories automatically (`chezmoi update`).
 
 ## Shell keybindings
@@ -112,11 +112,11 @@ How it wires up (no manual editing needed):
 |-----|--------|-------|
 | `Ctrl-R` | fuzzy history search (television) — filters as you type, Enter to run | both |
 | `Ctrl-T` | smart autocomplete for the current command (television) | both |
-| `ff` / `fcd` | fuzzy-find a file to edit / dir to cd (television) | both |
-| `fsym` / `proj` | fuzzy-search code symbols / pick a repo under ~/repos (television) | both |
+| `ff` / `fcd` | fuzzy-find a file to edit / dir to cd (television) | nu |
+| `fsym` / `proj` | fuzzy-search code symbols / pick a repo under ~/projects (television) | nu |
 | `tv` | open the fuzzy finder; `tv text` greps, `tv symbols` jumps to code symbols, `tv tldr` browses cheatsheets | both |
 | `Esc` then `k`/`j`/`/` | vi-mode: normal mode, search history | both |
-| `→` / `Ctrl-F` | accept autosuggestion | zsh |
+| `→` | accept the autosuggestion (`Ctrl-→` accepts one word) | both |
 
 ## Neovim / LazyVim (leader = `Space`)
 
@@ -124,7 +124,7 @@ How it wires up (no manual editing needed):
 |-----|--------|
 | `<leader>ff` | find files (snacks.picker) | 
 | `<leader>/` | grep across the project |
-| `<leader>tv` / `<leader>tw` | television: find files / grep text (same `tv` UI as the shell) |
+| `<leader>fv` / `<leader>sv` | television: find files / grep text (same `tv` UI as the shell) |
 | `<leader>fb` | switch buffer |
 | `<leader>e` | toggle file explorer (neo-tree) |
 | `<leader>gg` | open lazygit |
@@ -138,26 +138,16 @@ How it wires up (no manual editing needed):
 | `Space` (wait) | **which-key** menu — discover every binding, no memorizing |
 | `:checkhealth` | diagnose your setup |
 
-## tmux (prefix = `Ctrl-a`)
-
-| Key | Action |
-|-----|--------|
-| `prefix` `|` / `-` | split vertical / horizontal |
-| `Ctrl-h/j/k/l` | move between panes *and* nvim splits (vim-tmux-navigator) |
-| `prefix` `r` | reload config |
-| `prefix` `[` | copy mode (`v` select, `y` yank, vi keys) |
-| `prefix` `c` / `n` / `1-9` | new window / next / select |
-| `prefix` `z` | zoom pane |
-
 ## WezTerm (leader = `Ctrl-Space`)
 
-Native splits/panes/tabs — themed Catppuccin Mocha, bottom tab bar shows
-`index · process · cwd`, right status shows leader/workspace/battery/clock.
+The terminal multiplexer — native splits/panes/tabs, no tmux. Follows
+`dots theme`; bottom tab bar shows `index · process · cwd`, right status shows
+leader/workspace/battery/clock.
 
 | Key | Action |
 |-----|--------|
-| `leader` `\|` / `-` | split vertical / horizontal |
-| `leader` `h/j/k/l` | move between panes |
+| `leader` `\` / `-` | split horizontal / vertical |
+| `Ctrl-h/j/k/l` | move between panes *and* nvim splits (seamless) |
 | `leader` `H/J/K/L` | resize the active pane |
 | `leader` `z` / `x` | zoom / close pane |
 | `leader` `c` / `n` / `p` / `1-9` | new tab / next / prev / jump |
@@ -168,8 +158,8 @@ Native splits/panes/tabs — themed Catppuccin Mocha, bottom tab bar shows
 | `⌘/Ctrl +`/`-`/`0` | font size up / down / reset |
 | `⌘/Ctrl Enter` | toggle fullscreen |
 
-The unfocused pane dims automatically. tmux still works inside WezTerm
-(prefix `Ctrl-a`) — they don't collide since the leader is `Ctrl-Space`.
+The unfocused pane dims automatically. `Ctrl-h/j/k/l` crosses the Neovim↔WezTerm
+boundary transparently (smart-splits.nvim).
 
 ## CLI tools at a glance
 

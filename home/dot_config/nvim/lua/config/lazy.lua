@@ -26,7 +26,7 @@ require("lazy").setup({
     { import = "lazyvim.plugins.extras.lang.json" },
     -- Tooling extras. No fuzzy-finder extra: LazyVim's built-in snacks.picker is
     -- the in-editor finder (needs no extra binary), and `tv` (television) is
-    -- wired in via config/keymaps.lua (<leader>tv / <leader>tw) as the
+    -- wired in via config/keymaps.lua (<leader>fv / <leader>sv) as the
     -- terminal-style fuzzy finder — matching the shell, where tv replaced fzf.
     { import = "lazyvim.plugins.extras.formatting.prettier" },
     -- neotest core: activates the test runner so the go/python/rust lang
@@ -39,7 +39,7 @@ require("lazy").setup({
     { import = "plugins" },
   },
   defaults = { lazy = false, version = false },
-  install = { colorscheme = { "tokyonight", "habamax" } },
+  install = { colorscheme = { "catppuccin", "habamax" } },
   checker = { enabled = true, notify = false },
   performance = {
     rtp = {

@@ -7,7 +7,7 @@
 #
 # Colours follow `dots theme`: the "dots" theme is generated from the active
 # palette at ~/.config/television/themes/dots.toml by `dots theme` /
-# run_after_46-theme (same mechanism as starship/tmux). Falls back to tv's
+# run_after_46-theme (same mechanism as starship). Falls back to tv's
 # bundled default until that file exists.
 
 default_channel = "files"

@@ -21,15 +21,14 @@ your git name/email, then applies all dotfiles and runs the provisioning scripts
 |-------------|-------|
 | Shell       | **nushell** (default login shell), zsh (fallback), starship prompt |
 | Shell UX    | carapace (completions), direnv, zoxide, television (history/autocomplete on Ctrl-R/Ctrl-T) |
-| Editors     | **neovim + LazyVim**, **Doom Emacs**, tmux (+ tpm) |
+| Editors     | **neovim + LazyVim**, **Doom Emacs** |
 | Languages   | rust (rustup), swift (swiftly), go, python (+ uv), node |
 | Dev tools   | per-language LSPs/linters/formatters: clippy·rustfmt·rust-analyzer, goimports·gopls·dlv·gofumpt, pytest·mypy, prettier·eslint·tsc (see `go_tools`/`cargo_tools`/`python_tools`/`node_globals` in `packages.yaml`) |
-| Terminal    | **wezterm** |
-| Containers  | **podman** (rootless; `podman machine` on macOS) — no Docker Desktop; `docker`→`podman` shim |
+| Terminal    | **wezterm** (also the multiplexer — splits/panes/tabs, no tmux) |
+| Containers  | **podman** (rootless; `podman machine` on macOS) — no Docker Desktop; `docker`→`podman` shim; podman-compose, **dive**, **trivy** (CVE/secret scan) |
 | Fuzzy/nav   | **television** (`tv`, fuzzy finder w/ channels), zoxide, ripgrep, fd, bat, eza, **yazi** (file manager w/ previews) |
 | Modern CLI  | tldr (tealdeer), just, btop, dust/duf/procs, sd, hyperfine, xh, jless |
 | Git         | git, git-delta, lazygit, gh, **difftastic** (`git dft`), **git-absorb**, global ignore + commit template |
-| Containers  | podman, podman-compose, **dive**, **trivy** (CVE/secret scan) |
 | Kubernetes  | kubectl, **k9s** |
 | Media       | ffmpeg, imagemagick, exiftool, yt-dlp |
 | AI          | Claude Code CLI, ollama |
@@ -48,7 +47,8 @@ A few deliberate choices, so the "why" survives:
   each language gets its first-class, always-current toolchain. (`mise` is the unified
   alternative; chosen against on purpose.)
 - **podman over Docker Desktop** — rootless, daemonless, no licensing; `docker` is shimmed to it.
-- **One theme everywhere** — Catppuccin Mocha across WezTerm, tmux, Neovim, and television.
+- **One theme everywhere** — `dots theme` retints WezTerm, Neovim, Doom, nushell, starship,
+  bat and television together from a single palette (default Catppuccin Mocha).
 - **`packages.yaml` is the single source of truth** — add a tool there, never in an ad-hoc script.
 - **Hooks enforce hygiene globally** (secret scan, protected branches, format/lint/test) with
   easy, explicit bypasses.
@@ -73,7 +73,7 @@ Everything is integrated around a few habits — `nvim` is the editor everywhere
 | `.chezmoiroot` → `home/` | chezmoi source lives under `home/`, keeping the repo root clean |
 | `home/.chezmoidata/packages.yaml` | **single source of truth** for all package lists |
 | `home/.chezmoi.toml.tmpl` | first-run prompts (git identity); no secrets committed |
-| `home/.chezmoiexternal.toml` | external repos kept in sync (Doom Emacs, tpm) |
+| `home/.chezmoiexternal.toml` | external repos kept in sync (Doom Emacs) |
 | `home/run_*` | provisioning scripts, executed in filename order |
 | `home/dot_config/*` | per-tool configs (nvim, nushell, doom, wezterm, …) |
 

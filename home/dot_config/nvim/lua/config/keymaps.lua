@@ -84,10 +84,11 @@ local function edit_at_location(sel)
   end
 end
 
-vim.keymap.set("n", "<leader>tv", function()
+-- Live under the file/search which-key groups (not <leader>t, which is +test).
+vim.keymap.set("n", "<leader>fv", function()
   tv_run("files", edit_files)
 end, { desc = "Television: find files" })
 
-vim.keymap.set("n", "<leader>tw", function()
+vim.keymap.set("n", "<leader>sv", function()
   tv_run("text", edit_at_location)
 end, { desc = "Television: grep text" })

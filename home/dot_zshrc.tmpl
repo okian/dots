@@ -1,6 +1,9 @@
 {{- $brew := "/home/linuxbrew/.linuxbrew" -}}
 {{- if .isMac -}}{{- if eq .chezmoi.arch "arm64" -}}{{- $brew = "/opt/homebrew" -}}{{- else -}}{{- $brew = "/usr/local" -}}{{- end -}}{{- end -}}
-# .zshrc — fallback shell (default is nushell). Managed by chezmoi.
+# .zshrc — minimal FALLBACK shell (the daily driver is nushell). Managed by
+# chezmoi. Deliberately lean: it shares env, theme and aliases with nushell, but
+# the fuzzy-finder helpers and tips live only in nushell — `tv` is always one
+# keystroke away (Ctrl-T / Ctrl-R) if you land here.
 
 # Homebrew
 [ -x "{{ $brew }}/bin/brew" ] && eval "$({{ $brew }}/bin/brew shellenv)"
@@ -21,8 +24,8 @@ HISTSIZE=100000
 SAVEHIST=100000
 setopt SHARE_HISTORY HIST_IGNORE_ALL_DUPS INC_APPEND_HISTORY
 
-# Completions + vi mode
-autoload -Uz compinit && compinit
+# Completions (-C: trust the dumpfile, skip the security scan = faster) + vi mode
+autoload -Uz compinit && compinit -C
 bindkey -v
 zstyle ':completion:*' matcher-list 'm:{a-zA-Z}={A-Za-z}'
 
@@ -31,30 +34,13 @@ zstyle ':completion:*' matcher-list 'm:{a-zA-Z}={A-Za-z}'
 # follow the theme via ~/.config/television/themes/dots.toml, not env.)
 [ -r ~/.config/dots/active-theme.sh ] && . ~/.config/dots/active-theme.sh
 
-# Fuzzy-find a file (television `files` channel, bat preview) and open it.
-ff() { local f; f=$(tv files); [ -n "$f" ] && ${EDITOR:-nvim} "$f"; }
-# Fuzzy-find a directory and cd into it (fd feeds television on stdin).
-fcd() { local d; d=$(fd --type d --hidden --follow --exclude .git | tv --preview-command 'eza --tree --level=2 --color=always {}'); [ -n "$d" ] && cd "$d"; }
-# `y` opens yazi and cd's to wherever you quit it (`command cat` dodges the bat
-# alias; preserves yazi/cd exit status and always removes the temp file).
-y() {
-  local tmp cwd status
-  tmp="$(mktemp -t yazi-cwd.XXXXXX)" || return
-  yazi "$@" --cwd-file="$tmp"
-  status=$?
-  if cwd="$(command cat -- "$tmp")" && [ -n "$cwd" ] && [ "$cwd" != "$PWD" ]; then
-    cd -- "$cwd" || status=$?
-  fi
-  rm -f -- "$tmp"
-  return "$status"
-}
-
-# Aliases
-alias ll='eza -la --icons --group-directories-first 2>/dev/null || ls -la'
-alias lt='eza --tree --level=2 --icons'
+# Aliases — kept in step with nushell (config.nu) so both shells behave the same.
+command -v eza >/dev/null && alias ls='eza --icons --group-directories-first'
+alias ll='ls -la'
+alias la='ls -a'
+alias lt='eza --tree --level=2 --icons 2>/dev/null || ls -la'
 alias g='git' lg='lazygit' v='nvim' vim='nvim' cat='bat'
 alias top='btop'
-alias nu='nu'   # drop into nushell anytime
 # Container muscle-memory: docker -> podman
 alias docker='podman' docker-compose='podman-compose' dc='podman-compose'
 
@@ -73,13 +59,3 @@ _brew_prefix="$(brew --prefix 2>/dev/null)"
 [ -f "$_brew_prefix/share/zsh-fast-syntax-highlighting/fast-syntax-highlighting.plugin.zsh" ] && \
   source "$_brew_prefix/share/zsh-fast-syntax-highlighting/fast-syntax-highlighting.plugin.zsh"
 unset _brew_prefix
-
-# Random usage tip on interactive startup (opt out: export DOTS_NO_TIPS=1).
-if [[ -o interactive && -z "${DOTS_NO_TIPS:-}" && -r ~/.config/dots/tips.txt ]]; then
-  _tip=$(grep -vE '^[[:space:]]*(#|$)' ~/.config/dots/tips.txt | sort -R | head -1)
-  [ -n "$_tip" ] && print -P "%B%F{yellow}💡 tip%f%b ${_tip} %F{8}— cheatsheet: ~/.config/dots/cheatsheet.md%f"
-  unset _tip
-fi
-# Quick doc helpers in the fallback shell, mirroring nushell's `dots`.
-tips()       { grep -vE '^[[:space:]]*(#|$)' ~/.config/dots/tips.txt; }
-cheatsheet() { bat --style=plain --paging=always -l md ~/.config/dots/cheatsheet.md 2>/dev/null || cat ~/.config/dots/cheatsheet.md; }

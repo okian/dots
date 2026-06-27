@@ -8,11 +8,11 @@ patterns, not rules — steal what fits.
 - **Don't `cd` by hand across the tree.** Use `z` (zoxide): after visiting a
   directory once, `z proj`, `z ess`, `z dot` jump straight there by a fragment of
   the path. `zi` gives an interactive picker when several match.
-- **Fuzzy-jump when you don't remember the name:** `fcd` (both shells) opens a
-  television picker of subdirectories with a tree preview.
-- **Stay in one terminal with tmux.** One session per project; `prefix |` / `prefix -`
-  to split. `Ctrl-h/j/k/l` moves seamlessly between tmux panes *and* Neovim splits.
-  Detach with `prefix d`, reattach later with `tmux a` — your layout survives.
+- **Fuzzy-jump when you don't remember the name:** `fcd` opens a television
+  picker of subdirectories with a tree preview.
+- **Split inside WezTerm** instead of opening new windows: `Ctrl-Space \` / `-`
+  to split. `Ctrl-h/j/k/l` moves seamlessly between WezTerm panes *and* Neovim
+  splits — the same four keys whether the neighbour is a shell or an editor.
 - **`cd -` toggles** between the last two directories.
 
 ## Searching
@@ -27,13 +27,13 @@ A two-step rhythm beats scrolling: **filter to candidates, then act.**
   `Ctrl-T` fuzzy-completes the command you're typing.
 - **Find-then-edit in one move:** `ff` lists files through television with a bat
   preview and opens your pick in Neovim. For content, `tv text` greps and prints,
-  or do it inside the editor: `nvim` then `<leader>/` (or `<leader>tw`).
+  or do it inside the editor: `nvim` then `<leader>/` (or `<leader>sv` for tv).
 - **Jump to a symbol (terminal):** `fsym` (or `tv symbols`) fuzzy-searches the
   current project's classes/functions/variables via universal-ctags — the preview
   scrolls to the definition and Enter opens Neovim there. Filter by symbol name,
   kind, or file path; it's the terminal twin of Neovim's LSP symbol search.
-- **Jump to a project:** `proj` (or `tv projects`) lists git repos under `~/repos`
-  and `~/projects` with a README/tree preview; Enter cd's in, `Ctrl-S` opens that
+- **Jump to a project:** `proj` (or `tv projects`) lists git repos under
+  `~/projects` with a README/tree preview; Enter cd's in, `Ctrl-S` opens that
   repo's symbols, `Ctrl-E` opens it in Neovim.
 - **Pipe into `tv`** whenever a command spits a long list:
   `git branch | tv`, `brew leaves | tv`, `rg -l TODO | tv`.

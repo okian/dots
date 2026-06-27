@@ -65,6 +65,11 @@ hooks_disabled() {
 have()           { command -v "$1" >/dev/null 2>&1; }
 repo_root()      { git rev-parse --show-toplevel 2>/dev/null; }
 
+# Run a command at the repo root with ALL output on stderr — keeps stdout clean
+# for callers that capture it, and centralizes the old repeated
+# `( cd "$(repo_root)" && CMD ) >&2 2>&1` idiom.
+run_at_root() { ( cd "$(repo_root)" 2>/dev/null && "$@" ) >&2 2>&1; }
+
 # True when the repo is managed by a tool (Homebrew & its taps), not by the
 # user. The global hooks must never police these — e.g. Homebrew's auto-update
 # rebases its own 'main', which would otherwise trip pre-rebase/pre-push.
@@ -73,8 +78,8 @@ foreign_repo() {
   [ -n "$root" ] || return 1
   case "$root" in
     "${HOMEBREW_PREFIX:-/opt/homebrew}" | "${HOMEBREW_PREFIX:-/opt/homebrew}"/*) return 0 ;;
-    */Homebrew | */Homebrew/* | */Library/Taps/*) return 0 ;;
-    /opt/homebrew | /opt/homebrew/* | /home/linuxbrew/* | /usr/local/Homebrew | /usr/local/Homebrew/*) return 0 ;;
+    */Homebrew | */Homebrew/* | */Library/Taps/*) return 0 ;;  # incl. /usr/local/Homebrew
+    /opt/homebrew | /opt/homebrew/* | /home/linuxbrew/*) return 0 ;;
   esac
   return 1
 }

@@ -52,8 +52,6 @@ config.font = wezterm.font_with_fallback({
 })
 config.font_size = 14.0
 config.line_height = 1.05
--- JetBrains Mono ligatures (calt/liga/clig on by default; opt back in explicitly).
-config.harfbuzz_features = { "calt=1", "liga=1", "clig=1" }
 
 config.window_decorations = "RESIZE"
 -- Roomier padding so text breathes away from the window edge.
@@ -145,18 +143,40 @@ wezterm.on("update-right-status", function(window, _pane)
   window:set_right_status(wezterm.format(cells))
 end)
 
+-- ── Pane navigation (unified with Neovim) ────────────────────────────────────
+-- Ctrl-h/j/k/l moves between WezTerm panes — but when Neovim is the foreground
+-- process the key is passed through so smart-splits.nvim moves the Neovim split
+-- (and hands back to WezTerm at the edge). One navigation idiom everywhere.
+local function is_nvim(pane)
+  return (pane:get_foreground_process_name() or ""):find("nvim") ~= nil
+end
+local nav_dirs = { h = "Left", j = "Down", k = "Up", l = "Right" }
+local function split_nav(key)
+  return {
+    key = key,
+    mods = "CTRL",
+    action = wezterm.action_callback(function(win, pane)
+      if is_nvim(pane) then
+        win:perform_action(act.SendKey({ key = key, mods = "CTRL" }), pane)
+      else
+        win:perform_action(act.ActivatePaneDirection(nav_dirs[key]), pane)
+      end
+    end),
+  }
+end
+
 -- ── Keybindings ──────────────────────────────────────────────────────────────
--- Leader = Ctrl-Space (no conflict with shell Ctrl-a or tmux).
+-- Leader = Ctrl-Space (no conflict with shell Ctrl-a).
 config.leader = { key = "Space", mods = "CTRL", timeout_milliseconds = 1000 }
 config.keys = {
   -- Splits.
-  { key = "|", mods = "LEADER|SHIFT", action = act.SplitHorizontal({ domain = "CurrentPaneDomain" }) },
-  { key = "-", mods = "LEADER",       action = act.SplitVertical({ domain = "CurrentPaneDomain" }) },
-  -- Navigate panes.
-  { key = "h", mods = "LEADER", action = act.ActivatePaneDirection("Left") },
-  { key = "j", mods = "LEADER", action = act.ActivatePaneDirection("Down") },
-  { key = "k", mods = "LEADER", action = act.ActivatePaneDirection("Up") },
-  { key = "l", mods = "LEADER", action = act.ActivatePaneDirection("Right") },
+  { key = "\\", mods = "LEADER", action = act.SplitHorizontal({ domain = "CurrentPaneDomain" }) },
+  { key = "-",  mods = "LEADER", action = act.SplitVertical({ domain = "CurrentPaneDomain" }) },
+  -- Navigate panes (Ctrl-h/j/k/l, shared with Neovim).
+  split_nav("h"),
+  split_nav("j"),
+  split_nav("k"),
+  split_nav("l"),
   -- Resize panes.
   { key = "H", mods = "LEADER|SHIFT", action = act.AdjustPaneSize({ "Left", 5 }) },
   { key = "J", mods = "LEADER|SHIFT", action = act.AdjustPaneSize({ "Down", 5 }) },

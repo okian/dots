@@ -5,9 +5,7 @@
 set -euo pipefail
 
 # Ensure brew + cargo on PATH for this script.
-for p in /opt/homebrew/bin/brew /usr/local/bin/brew /home/linuxbrew/.linuxbrew/bin/brew; do
-  [ -x "$p" ] && eval "$("$p" shellenv)" && break
-done
+{{ template "brew-shellenv.sh" . }}
 export PATH="$HOME/.cargo/bin:$HOME/.local/bin:$PATH"
 
 # --- Rust (rustup) ----------------------------------------------------------

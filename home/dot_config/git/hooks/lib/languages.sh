@@ -40,7 +40,7 @@ _fmt_rust() {
   [ -f "$(repo_root)/Cargo.toml" ] || return 0
   [ -n "$(staged_files_matching '*.rs')" ] || return 0
   hook_step "rust: cargo fmt --check"
-  if ! ( cd "$(repo_root)" && cargo fmt --all --check ) >&2 2>&1; then
+  if ! run_at_root cargo fmt --all --check; then
     hook_err "rust files need formatting"
     hook_hint "fix: cargo fmt --all"
     return 1
@@ -71,13 +71,13 @@ _fmt_node() {
   [ -z "$files" ] && return 0
   if has_npm_script "format:check"; then
     hook_step "node: $(node_pm) run format:check"
-    ( cd "$(repo_root)" && $(node_pm) run --silent format:check ) >&2 2>&1 || {
+    run_at_root "$(node_pm)" run --silent format:check || {
       hook_err "prettier/format check failed"; hook_hint "fix: $(node_pm) run format"; return 1; }
   elif have npx; then
     hook_step "node: prettier --check"
     # --no-install: only runs if prettier is a project dep; otherwise no-op skip.
     # shellcheck disable=SC2086
-    if ( cd "$(repo_root)" && npx --no-install prettier --check $files ) >&2 2>&1; then
+    if run_at_root npx --no-install prettier --check $files; then
       return 0
     else
       local rc=$?
@@ -133,10 +133,10 @@ _lint_go() {
   local rc=0
   if have golangci-lint; then
     hook_step "go: golangci-lint run"
-    ( cd "$(repo_root)" && golangci-lint run ) >&2 2>&1 || rc=1
+    run_at_root golangci-lint run || rc=1
   else
     hook_step "go: go vet ./..."
-    ( cd "$(repo_root)" && go vet ./... ) >&2 2>&1 || rc=1
+    run_at_root go vet ./... || rc=1
   fi
   if [ "$rc" -ne 0 ]; then hook_err "go lint failed"; return 1; fi
   return 0
@@ -145,7 +145,7 @@ _lint_go() {
 _lint_rust() {
   have cargo || return 0
   hook_step "rust: cargo clippy -D warnings"
-  if ! ( cd "$(repo_root)" && cargo clippy --all-targets --all-features -- -D warnings ) >&2 2>&1; then
+  if ! run_at_root cargo clippy --all-targets --all-features -- -D warnings; then
     hook_err "clippy failed"; return 1
   fi
 }
@@ -153,7 +153,7 @@ _lint_rust() {
 _lint_swift() {
   have swiftlint || return 0
   hook_step "swift: swiftlint"
-  if ! ( cd "$(repo_root)" && swiftlint --quiet ) >&2 2>&1; then
+  if ! run_at_root swiftlint --quiet; then
     hook_err "swiftlint failed"; return 1
   fi
 }
@@ -161,7 +161,7 @@ _lint_swift() {
 _lint_node() {
   has_npm_script lint || return 0
   hook_step "node: $(node_pm) run lint"
-  if ! ( cd "$(repo_root)" && $(node_pm) run --silent lint ) >&2 2>&1; then
+  if ! run_at_root "$(node_pm)" run --silent lint; then
     hook_err "node lint failed"; return 1
   fi
 }
@@ -169,7 +169,7 @@ _lint_node() {
 _lint_python() {
   have ruff || return 0
   hook_step "python: ruff check"
-  if ! ( cd "$(repo_root)" && ruff check . ) >&2 2>&1; then
+  if ! run_at_root ruff check .; then
     hook_err "ruff check failed"; return 1
   fi
 }
@@ -192,24 +192,24 @@ lang_test() { # lang_test <lang>
 _test_go() {
   have go || return 0
   hook_step "go: go test -short ./..."
-  ( cd "$(repo_root)" && go test -short ./... ) >&2 2>&1 || { hook_err "go tests failed"; return 1; }
+  run_at_root go test -short ./... || { hook_err "go tests failed"; return 1; }
 }
 _test_rust() {
   have cargo || return 0
   hook_step "rust: cargo test"
-  ( cd "$(repo_root)" && cargo test --all ) >&2 2>&1 || { hook_err "cargo test failed"; return 1; }
+  run_at_root cargo test --all || { hook_err "cargo test failed"; return 1; }
 }
 _test_swift() {
   have swift || return 0
   [ -f "$(repo_root)/Package.swift" ] || return 0
   hook_step "swift: swift test"
-  ( cd "$(repo_root)" && swift test ) >&2 2>&1 || { hook_err "swift test failed"; return 1; }
+  run_at_root swift test || { hook_err "swift test failed"; return 1; }
 }
 _test_node() {
   has_npm_script test || return 0
   local pm; pm=$(node_pm); [ -z "$pm" ] && return 0
   hook_step "node: $pm test"
-  ( cd "$(repo_root)" && CI=true $pm test --silent ) >&2 2>&1 || { hook_err "node tests failed"; return 1; }
+  run_at_root env CI=true "$pm" test --silent || { hook_err "node tests failed"; return 1; }
 }
 _test_python() {
   local runner=""
@@ -217,7 +217,7 @@ _test_python() {
   elif have python3 && python3 -c 'import pytest' >/dev/null 2>&1; then runner="python3 -m pytest -q"
   else return 0; fi
   hook_step "python: $runner"
-  ( cd "$(repo_root)" && eval "$runner" ) >&2 2>&1 || { hook_err "pytest failed"; return 1; }
+  run_at_root eval "$runner" || { hook_err "pytest failed"; return 1; }
 }
 
 # ===========================================================================
@@ -246,8 +246,15 @@ deps_reminder() { # deps_reminder <refA> <refB>
   _dep '(^|/)Package\.(swift|resolved)$'             "swift packages" "swift package resolve"
   _dep '(^|/)(package\.json|package-lock\.json|pnpm-lock\.yaml|yarn\.lock|bun\.lockb)$' \
        "node deps" "$(node_pm) install"
+  # Pick the install command that matches the project's actual python tooling.
+  local py_install
+  if   [ -f "$root/uv.lock" ];          then py_install='uv sync'
+  elif [ -f "$root/poetry.lock" ];      then py_install='poetry install'
+  elif [ -f "$root/requirements.txt" ]; then py_install='pip install -r requirements.txt'
+  else                                       py_install='pip install -e .'
+  fi
   _dep '(^|/)(pyproject\.toml|poetry\.lock|requirements.*\.txt|uv\.lock)$' \
-       "python deps" "$( [ -f "$root/uv.lock" ] && echo 'uv sync' || echo 'pip install -r requirements.txt' )"
+       "python deps" "$py_install"
   _dep '(^|/)(build\.gradle(\.kts)?|settings\.gradle(\.kts)?|gradle/libs\.versions\.toml|pom\.xml)$' \
        "JVM build files" "./gradlew --refresh-dependencies  (or reimport in your IDE)"
 }

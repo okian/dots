@@ -1,0 +1,24 @@
+#!/usr/bin/env bash
+# Pre-generate nushell's tool-integration autoload files (starship, zoxide,
+# carapace, television) so interactive shells DON'T spawn four processes on every
+# launch — they just source whatever lands in nushell's vendor/autoload dir.
+# Runs on every apply (cheap, idempotent); `dots update` re-applies, so the init
+# files refresh after a tool upgrade. Degrades gracefully.
+set -euo pipefail
+
+{{ template "brew-shellenv.sh" . }}
+
+nu_bin="$(command -v nu || true)"
+[ -n "$nu_bin" ] || { echo "nushell not found; skipping shell integrations"; exit 0; }
+
+echo "==> Generating nushell tool integrations"
+# shellcheck disable=SC2016  # nushell expressions must stay literal (single-quoted)
+"$nu_bin" --no-config-file --commands '
+  let dir = ($nu.data-dir | path join "vendor" "autoload")
+  mkdir $dir
+  if (which starship | is-not-empty) { starship init nu | save -f ($dir | path join "starship.nu") }
+  if (which zoxide   | is-not-empty) { zoxide init nushell | save -f ($dir | path join "zoxide.nu") }
+  if (which carapace | is-not-empty) { carapace _carapace nushell | save -f ($dir | path join "carapace.nu") }
+  if (which tv       | is-not-empty) { tv init nu | save -f ($dir | path join "tv.nu") }
+' || echo "    generation failed; nushell startup falls back to no integrations"
+echo "==> shell integrations done"

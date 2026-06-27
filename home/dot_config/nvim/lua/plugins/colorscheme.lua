@@ -8,25 +8,33 @@ local map = {
   ["gruvbox-dark"] = "gruvbox",
 }
 
-local function active_colorscheme()
+local function active_slug()
   local f = io.open((os.getenv("HOME") or "") .. "/.config/dots/theme", "r")
   if not f then
     return "catppuccin-mocha"
   end
   local slug = f:read("*l")
   f:close()
-  return (slug and map[slug]) or "catppuccin-mocha"
+  return map[slug or ""] and slug or "catppuccin-mocha"
+end
+
+local slug = active_slug()
+-- Only the active theme loads eagerly at startup; the other three are lazy and
+-- load on demand if ever invoked with `:colorscheme`.
+local function spec(theme_slug, repo, name)
+  local active = theme_slug == slug
+  return { repo, name = name, lazy = not active, priority = active and 1000 or nil }
 end
 
 return {
-  { "catppuccin/nvim", name = "catppuccin", lazy = false, priority = 1000 },
-  { "shaunsingh/nord.nvim", lazy = false, priority = 1000 },
-  { "folke/tokyonight.nvim", lazy = false, priority = 1000 },
-  { "ellisonleao/gruvbox.nvim", lazy = false, priority = 1000 },
+  spec("catppuccin-mocha", "catppuccin/nvim", "catppuccin"),
+  spec("nord", "shaunsingh/nord.nvim"),
+  spec("tokyo-night", "folke/tokyonight.nvim"),
+  spec("gruvbox-dark", "ellisonleao/gruvbox.nvim"),
   {
     "LazyVim/LazyVim",
     opts = {
-      colorscheme = active_colorscheme(),
+      colorscheme = map[slug],
     },
   },
 }

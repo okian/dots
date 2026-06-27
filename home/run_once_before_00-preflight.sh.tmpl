@@ -25,8 +25,13 @@ echo "==> [preflight] macOS — ensuring Xcode Command Line Tools"
 if ! xcode-select -p >/dev/null 2>&1; then
   xcode-select --install || true
   echo "    A CLT install dialog may have opened. Re-run once it finishes if this fails."
-  # Wait for CLT to become available (non-interactive best effort).
-  until xcode-select -p >/dev/null 2>&1; do sleep 5; done
+  # Wait (bounded) for CLT to become available — never hang the bootstrap if the
+  # install dialog is cancelled. ~10 min, then continue with a warning.
+  for _ in $(seq 1 120); do
+    xcode-select -p >/dev/null 2>&1 && break
+    sleep 5
+  done
+  xcode-select -p >/dev/null 2>&1 || echo "    CLT still not present; continuing (re-run after installing)."
 fi
 {{ else if .isLinux -}}
 echo "==> [preflight] Linux — installing build essentials"

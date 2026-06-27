@@ -1,96 +1,73 @@
 # `dots` command — one-shot update of configs + every toolchain.
 # Usage:  dots update
 
+# Run one upgrade step; report (never abort) if its tool is missing or it fails.
+def _step [label: string, work: closure] {
+  print $"==> ($label)"
+  try { do $work } catch {|e| print $"   ! skipped: ($e.msg)" }
+}
+
 def "dots update" [] {
-  print "==> chezmoi update (pull configs + apply)"
-  try { ^chezmoi update }
-
-  print "==> brew upgrade"
-  try { ^brew upgrade; ^brew cleanup }
-
-  print "==> rustup update"
-  try { ^rustup update }
-
-  print "==> swiftly update"
-  try { ^swiftly update --assume-yes }
-
-  print "==> uv: install latest python (uv itself is updated by brew above)"
-  try { ^uv python install }
-
-  print "==> uv tools upgrade (pytest, mypy, …)"
-  if (which uv | is-not-empty) { try { ^uv tool upgrade --all } }
-
-  print "==> npm global tools update"
-  if (which npm | is-not-empty) { try { ^npm update -g } }
-
-  print "==> neovim plugin sync"
-  try { ^nvim --headless "+Lazy! sync" +qa }
-
-  print "==> doom upgrade"
-  let doom = ($nu.home-dir | path join '.config' 'emacs' 'bin' 'doom')
-  if ($doom | path exists) { try { ^$doom upgrade --force } }
-
+  _step "chezmoi update (pull configs + apply)" { ^chezmoi update }
+  _step "brew upgrade" { ^brew upgrade; ^brew cleanup }
+  _step "rustup update" { ^rustup update }
+  _step "swiftly update" { ^swiftly update --assume-yes }
+  _step "uv: install latest python (uv itself updated by brew above)" { ^uv python install }
+  _step "uv tools upgrade (pytest, mypy, …)" { ^uv tool upgrade --all }
+  _step "npm global tools update" { ^npm update -g }
+  _step "neovim plugin sync" { ^nvim --headless "+Lazy! sync" +qa }
+  _step "doom upgrade" {
+    let doom = ($nu.home-dir | path join '.config' 'emacs' 'bin' 'doom')
+    if ($doom | path exists) { ^$doom upgrade --force }
+  }
   print "==> done. Everything is at latest."
 }
 
 # --- Repo / dotfiles management (one command, no raw chezmoi) ---------------
 # Mental model:  edit → diff → apply  (local);  pull ↓ / save ↑  (remote).
 
-def _have_chezmoi [] {
-  if (which chezmoi | is-empty) { print "✗ chezmoi is not installed on this machine."; false } else { true }
+# Guard: abort with a clear message if chezmoi isn't installed. One line at the
+# top of each command that needs it (replaces the old print-and-return dance).
+def _need [] {
+  if (which chezmoi | is-empty) {
+    error make --unspanned { msg: "chezmoi is not installed on this machine." }
+  }
 }
 
 # Preview what applying would change in $HOME.
-def "dots diff" [] {
-  if not (_have_chezmoi) { return }
-  ^chezmoi diff
-}
+def "dots diff" [] { _need; ^chezmoi diff }
 
 # Apply your local source edits to $HOME.
-def "dots apply" [] {
-  if not (_have_chezmoi) { return }
-  ^chezmoi apply
-  print "==> applied."
-}
+def "dots apply" [] { _need; ^chezmoi apply; print "==> applied." }
 
 # Edit a managed file (edits the source, then applies it). e.g. dots edit ~/.config/git/config
 def "dots edit" [...file: string] {
-  if not (_have_chezmoi) { return }
+  _need
   if ($file | is-empty) { print "usage: dots edit <file> [<file> …]"; return }
   ^chezmoi edit --apply ...$file
 }
 
 # Show the fully rendered content a target file would have.
-def "dots show" [file: string] {
-  if not (_have_chezmoi) { return }
-  ^chezmoi cat $file
-}
+def "dots show" [file: string] { _need; ^chezmoi cat $file }
 
-# Start managing an existing file (copy it into the repo). --encrypt for secrets.
-def "dots add" [path: string, --encrypt] {
-  if not (_have_chezmoi) { return }
-  if $encrypt { ^chezmoi add --encrypt $path } else { ^chezmoi add $path }
-  print $"==> now managing ($path)(if $encrypt { ' (encrypted)' } else { '' })."
+# Start managing an existing file (copy it into the repo). For secrets: dots secret-add.
+def "dots add" [path: string] {
+  _need
+  ^chezmoi add $path
+  print $"==> now managing ($path)."
 }
 
 # Stop managing a file (leaves it in $HOME, removes it from the repo).
-def "dots forget" [path: string] {
-  if not (_have_chezmoi) { return }
-  ^chezmoi forget $path
-}
+def "dots forget" [path: string] { _need; ^chezmoi forget $path }
 
 # Pull the latest from the remote and apply (git pull + apply). The downward
 # counterpart to `save`. (`dots update` also upgrades every toolchain.)
-def "dots pull" [] {
-  if not (_have_chezmoi) { return }
-  ^chezmoi update
-  print "==> pulled & applied."
-}
+def "dots pull" [] { _need; ^chezmoi update; print "==> pulled & applied." }
 
 # Save ALL local repo changes upward: stage everything, commit, push.
 def "dots save" [message?: string] {
-  if not (_have_chezmoi) { return }
-  let dirty = (^chezmoi git -- status --porcelain | complete | get stdout | str trim)
+  _need
+  let dirty = (^chezmoi git -- status --porcelain | str trim)
   if ($dirty | is-empty) { print "nothing to save — the repo is clean."; return }
   ^chezmoi git -- add -A
   ^chezmoi git -- commit -m ($message | default "update dotfiles")
@@ -100,38 +77,26 @@ def "dots save" [message?: string] {
 
 # Overview: repo git status + a summary of pending changes to apply.
 def "dots status" [] {
-  if not (_have_chezmoi) { return }
+  _need
   print "── repo (uncommitted changes) ──"
   ^chezmoi git -- status -sb
   print ""
   print "── pending apply (chezmoi diff) ──"
-  let d = (^chezmoi diff | complete | get stdout)
-  if ($d | str trim | is-empty) { print "  (none — $HOME matches the repo)" } else { print $d }
+  let d = (^chezmoi diff | str trim)
+  if ($d | is-empty) { print "  (none — $HOME matches the repo)" } else { print $d }
 }
 
 # Jump into the dotfiles source directory.
-def --env "dots cd" [] {
-  if not (_have_chezmoi) { return }
-  cd (^chezmoi source-path | str trim)
-}
+def --env "dots cd" [] { _need; cd (^chezmoi source-path | str trim) }
 
 # Recent commit history of the dotfiles repo.
-def "dots log" [n: int = 15] {
-  if not (_have_chezmoi) { return }
-  ^chezmoi git -- log --oneline -n $n
-}
+def "dots log" [n: int = 15] { _need; ^chezmoi git -- log --oneline -n $n }
 
 # List every file this repo manages.
-def "dots managed" [] {
-  if not (_have_chezmoi) { return }
-  ^chezmoi managed
-}
+def "dots managed" [] { _need; ^chezmoi managed }
 
 # Diagnose the chezmoi/toolchain setup.
-def "dots doctor" [] {
-  if not (_have_chezmoi) { return }
-  ^chezmoi doctor
-}
+def "dots doctor" [] { _need; ^chezmoi doctor }
 
 # --- Secrets (age encryption) ----------------------------------------------
 
@@ -161,29 +126,30 @@ def "dots secrets-setup" [] {
 
 # Encrypt a file and add it to the repo (ciphertext is safe to commit/push).
 def "dots secret-add" [path: string] {
+  _need
   ^chezmoi add --encrypt $path
   print $"==> Encrypted and staged ($path)."
   print "Commit & push:  chezmoi git -- add . ; chezmoi git -- commit -m secret ; chezmoi git -- push"
 }
 
-# --- Per-entity git identities (driven by ~/repos) -------------------------
-# Each top-level dir under ~/repos is an entity (work, personal, NGO…) with its
-# own git identity. See ~/bins/git-identities-sync for the full mechanism.
+# --- Per-entity git identities (driven by ~/projects) ----------------------
+# Each top-level dir under ~/projects is an entity (work, personal, NGO…) with
+# its own git identity. See ~/bins/git-identities-sync for the full mechanism.
 
 def _gi_confd [] { $nu.home-dir | path join '.config' 'git' 'conf.d' }
 def _gi_file [entity: string] { (_gi_confd) | path join $"($entity).gitconfig" }
 
-# Regenerate the includeIf blocks from the current ~/repos layout.
+# Regenerate the includeIf blocks from the current ~/projects layout.
 def "dots git-identity sync" [] {
   let bin = ($nu.home-dir | path join 'bins' 'git-identities-sync')
   if ($bin | path exists) { ^$bin } else { print "git-identities-sync not installed — run `chezmoi apply`" }
 }
 
-# List entities, their resolved identity, and whether a ~/repos dir exists.
+# List entities, their resolved identity, and whether a ~/projects dir exists.
 def "dots git-identity list" [] {
   let confd = (_gi_confd)
   if not ($confd | path exists) { print "no identities yet — run `dots git-identity sync`"; return }
-  let repos = ($nu.home-dir | path join 'repos')
+  let repos = ($nu.home-dir | path join 'projects')
   glob ($confd | path join '*.gitconfig')
     | where {|p| ($p | path basename) != 'identities.gitconfig' }
     | each {|p|
@@ -245,9 +211,9 @@ def "dots git-identity add" [entity: string, email: string, name?: string, --no-
     $"\tname = ($nm)"
     $"\temail = ($email)"
     ""] | str join (char nl)) | save -f $pef
-  mkdir ($nu.home-dir | path join 'repos' $entity)
+  mkdir ($nu.home-dir | path join 'projects' $entity)
   dots git-identity sync
-  print $"==> wrote ($pef) and ensured ~/repos/($entity)/"
+  print $"==> wrote ($pef) and ensured ~/projects/($entity)/"
   _gi_persist $entity [$email $nm] (not $no_push)
 }
 
@@ -285,7 +251,7 @@ def "dots hooks status" [] {
 }
 
 # Turn all hooks off / on globally.
-def "dots hooks disable" [] { ^git config --global hooks.disable true;  print "global hooks disabled" }
+def "dots hooks disable" [] { ^git config --global hooks.disable true; print "global hooks disabled" }
 def "dots hooks enable"  [] { ^git config --global --unset hooks.disable; print "global hooks enabled" }
 
 # Run the pre-commit hook now against staged changes (dry test).
@@ -298,23 +264,24 @@ def "dots hooks test" [] {
 
 def _tips_file [] { $nu.home-dir | path join '.config' 'dots' 'tips.txt' }
 
+# Tips file lines, minus blanks and comments.
+def _tips_lines [] {
+  let f = (_tips_file)
+  if not ($f | path exists) { return [] }
+  open $f | lines | where {|l| (($l | str trim) != "") and (not ($l | str starts-with "#")) }
+}
+
 # Print one random usage tip (shown on shell startup).
 def "dots tip" [] {
-  let f = (_tips_file)
-  if not ($f | path exists) { return }
-  let tips = (open $f | lines | where {|l| (($l | str trim) != "") and (not ($l | str starts-with "#")) })
+  let tips = (_tips_lines)
   if ($tips | is-empty) { return }
-  let t = ($tips | get (random int 0..(($tips | length) - 1)))
+  let t = ($tips | shuffle | first)
   print $"(ansi yellow_bold)💡 tip(ansi reset) ($t) (ansi dark_gray)— `dots tips` for more(ansi reset)"
 }
 
 # List all tips.
 def "dots tips" [] {
-  let f = (_tips_file)
-  if ($f | path exists) {
-    open $f | lines | where {|l| (($l | str trim) != "") and (not ($l | str starts-with "#")) }
-      | each {|t| print $"(ansi cyan)•(ansi reset) ($t)" }
-  }
+  _tips_lines | each {|t| print $"(ansi cyan)•(ansi reset) ($t)" }
 }
 
 # Open the cheatsheet (aliases, keybindings, workflows).
@@ -332,7 +299,7 @@ def "dots" [] {
   print "    dots edit <file>     edit a managed file, then apply it"
   print "    dots diff            preview pending changes to your home dir"
   print "    dots apply           apply your local edits to your home dir"
-  print "    dots add <p>         start managing a file  (--encrypt for secrets)"
+  print "    dots add <p>         start managing a file  (secrets: dots secret-add)"
   print "    dots forget <p>      stop managing a file"
   print "    dots show <file>     show a file's fully rendered content"
   print ""

@@ -43,7 +43,11 @@ style = "bold yellow"
 symbol = " "
 style = "bold green"
 
-# --- Palettes (one per `dots theme`) ---------------------------------------
+# --- Palettes ---------------------------------------------------------------
+# Only the default (catppuccin) block lives here, as the standalone fallback for
+# a fresh machine before `dots theme` runs. Every other theme's palette block is
+# GENERATED from themes.nu into ~/.config/dots/starship.toml (the file shells
+# actually point STARSHIP_CONFIG at) — the registry is the single source of truth.
 [palettes.catppuccin_mocha]
 red = "#f38ba8"
 green = "#a6e3a1"
@@ -51,27 +55,3 @@ yellow = "#f9e2af"
 blue = "#89b4fa"
 magenta = "#cba6f7"
 cyan = "#94e2d5"
-
-[palettes.nord]
-red = "#bf616a"
-green = "#a3be8c"
-yellow = "#ebcb8b"
-blue = "#81a1c1"
-magenta = "#b48ead"
-cyan = "#88c0d0"
-
-[palettes.tokyo_night]
-red = "#f7768e"
-green = "#9ece6a"
-yellow = "#e0af68"
-blue = "#7aa2f7"
-magenta = "#bb9af7"
-cyan = "#7dcfff"
-
-[palettes.gruvbox_dark]
-red = "#fb4934"
-green = "#b8bb26"
-yellow = "#fabd2f"
-blue = "#83a598"
-magenta = "#d3869b"
-cyan = "#8ec07c"

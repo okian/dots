@@ -1,17 +1,17 @@
 # Custom television channel — managed by chezmoi.
-# Pick a git project (under ~/repos or ~/projects) and act on it:
+# Pick a git project (under ~/projects) and act on it:
 # `tv projects` (or the `proj` nushell helper, which cd's into the pick).
-# Modeled on the bundled `git-repos.toml` but scoped to the dev roots with a
+# Modeled on the bundled `git-repos.toml` but scoped to the dev root with a
 # README/tree preview. No `enter` action → Enter prints the path so `proj` can
 # cd; Ctrl-E opens it in the editor; Ctrl-S jumps into that repo's symbols.
-# Each root is searched only if it exists, so this is portable across machines.
+# ~/projects is also the per-entity git-identity root (see git-identities-sync).
 [metadata]
 name = "projects"
 requirements = ["fd", "git"]
-description = "Pick a git project under ~/repos or ~/projects; preview README/tree; cd, edit, or jump to symbols."
+description = "Pick a git project under ~/projects; preview README/tree; cd, edit, or jump to symbols."
 
 [source]
-command = "for d in ~/repos ~/projects; do [ -d \"$d\" ] && fd -g .git -HL -t d -d 5 --prune \"$d\" --exec dirname '{}'; done"
+command = "[ -d ~/projects ] && fd -g .git -HL -t d -d 5 --prune ~/projects --exec dirname '{}'"
 display = "{split:/:-1}"
 
 [preview]

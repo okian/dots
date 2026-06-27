@@ -59,8 +59,6 @@ packages:
     - git-lfs
     # secrets (age-keygen for the encryption keypair)
     - age
-    - gnupg
-    - git-crypt
     # git-hooks tooling (secret scan, linters, formatters)
     - gitleaks
     - golangci-lint
@@ -85,7 +83,6 @@ packages:
     # misc utilities
     - jq
     - yq
-    - tmux
     - wget
     - tree
     # productivity / TUIs
@@ -100,7 +97,6 @@ packages:
     - hyperfine     # command benchmarking
     - xh            # Rust HTTPie (HTTP client)
     - jless         # interactive JSON viewer
-    - zellij        # tmux alternative (available; tmux stays default)
     # git extras
     - difftastic    # structural, syntax-aware diffs (`git dft`)
     - git-absorb    # auto-route staged hunks into fixup commits
@@ -130,7 +126,6 @@ packages:
     #  font files and abort when checksums differ; the direct unzip overwrites.)
     # editors / terminals (Emacs is emacs-plus@30 in mac_brew_formulae, not a cask)
     - zed
-    - alacritty
     # ai / containers
     - claude
     - ollama-app    # renamed from `ollama` (the cask) in Homebrew
@@ -160,7 +155,6 @@ packages:
   linux_flatpak:
     - org.wezfurlong.wezterm
     - dev.zed.Zed
-    - org.alacritty.Alacritty
     - com.google.Chrome
     - com.discordapp.Discord
 

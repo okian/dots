@@ -17,8 +17,9 @@ command = "ctags -R --output-format=json --fields=+n --languages=-JSON --exclude
 output = "{split:\\::..2}"
 
 [preview]
+# No BAT_THEME override here: inherit it from the shell so the preview follows
+# `dots theme` (config.nu / active-theme.sh export the active theme's bat id).
 command = "bat -n --color=always '{split:\\::0}'"
-env = { BAT_THEME = "ansi" }
 offset = '{split:\::1}'
 
 [ui]

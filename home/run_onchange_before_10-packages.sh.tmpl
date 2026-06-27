@@ -4,9 +4,6 @@
 # rendered content and chezmoi re-runs it automatically.
 set -euo pipefail
 
-SUDO=""
-if [ "$(id -u)" -ne 0 ]; then SUDO="sudo"; fi
-
 # --- Homebrew ---------------------------------------------------------------
 if ! command -v brew >/dev/null 2>&1; then
   echo "==> Installing Homebrew"
@@ -14,14 +11,7 @@ if ! command -v brew >/dev/null 2>&1; then
     "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
 fi
 
-# Make brew available in this shell (paths differ by OS/arch).
-if [ -x /opt/homebrew/bin/brew ]; then
-  eval "$(/opt/homebrew/bin/brew shellenv)"
-elif [ -x /usr/local/bin/brew ]; then
-  eval "$(/usr/local/bin/brew shellenv)"
-elif [ -x /home/linuxbrew/.linuxbrew/bin/brew ]; then
-  eval "$(/home/linuxbrew/.linuxbrew/bin/brew shellenv)"
-fi
+{{ template "brew-shellenv.sh" . }}
 
 {{ if .isMac -}}
 # One-time migration: drop the old emacs-app cask (precompiled, no HarfBuzz /
@@ -89,6 +79,8 @@ fi
 
 {{ if .isLinux -}}
 # --- Linux GUI extras (best effort; only meaningful on a desktop) -----------
+SUDO=""
+if [ "$(id -u)" -ne 0 ]; then SUDO="sudo"; fi
 if command -v apt-get >/dev/null 2>&1; then
   export DEBIAN_FRONTEND=noninteractive
   $SUDO apt-get install -y {{ range .packages.linux_apt }}{{ . }} {{ end }}|| true

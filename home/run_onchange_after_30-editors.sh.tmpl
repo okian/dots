@@ -2,9 +2,7 @@
 # Bootstrap editor configs: LazyVim plugins + Doom Emacs.
 set -euo pipefail
 
-for p in /opt/homebrew/bin/brew /usr/local/bin/brew /home/linuxbrew/.linuxbrew/bin/brew; do
-  [ -x "$p" ] && eval "$("$p" shellenv)" && break
-done
+{{ template "brew-shellenv.sh" . }}
 
 # --- Neovim / LazyVim -------------------------------------------------------
 if command -v nvim >/dev/null 2>&1; then
@@ -22,11 +20,6 @@ if [ -x "$DOOM_BIN" ] && command -v emacs >/dev/null 2>&1; then
   # too — no `doom install` needed. (doom install is an interactive wizard whose
   # flags drift between versions; --no-fonts was removed in Doom 2.2.)
   "$DOOM_BIN" sync || true
-fi
-# --- tmux plugins (tpm cloned via .chezmoiexternal.toml) --------------------
-if [ -x "$HOME/.tmux/plugins/tpm/bin/install_plugins" ]; then
-  echo "==> Installing tmux plugins"
-  "$HOME/.tmux/plugins/tpm/bin/install_plugins" || true
 fi
 
 # --- git-lfs global filters (global hooks suggest LFS for large files) ------
