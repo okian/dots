@@ -1,5 +1,11 @@
 #!/usr/bin/env bash
 # Sane macOS system defaults. Renders empty on Linux.
+#
+# Every setting carries a `# reverse:` comment showing how to undo it. In most
+# cases `defaults delete <domain> <key>` restores the macOS factory default;
+# where the stock value matters it's written out explicitly. After reverting,
+# run:  killall cfprefsd Finder Dock SystemUIServer ControlCenter   (or log out)
+# to make the change take effect.
 set -euo pipefail
 {{ if .isMac -}}
 echo "==> Applying macOS defaults"
@@ -7,72 +13,123 @@ echo "==> Applying macOS defaults"
 # --- Appearance: always Dark, Orange accent + highlight, small sidebar icons.
 # Accent/Dark fully apply after the next login. ---
 defaults write NSGlobalDomain AppleInterfaceStyle -string "Dark"
+# reverse: defaults delete NSGlobalDomain AppleInterfaceStyle            (-> Light)
 defaults delete NSGlobalDomain AppleInterfaceStyleSwitchesAutomatically 2>/dev/null || true
+# reverse: defaults write NSGlobalDomain AppleInterfaceStyleSwitchesAutomatically -bool true  (auto Light/Dark)
 # Accent color: -1 Graphite, 0 Red, 1 Orange, 2 Yellow, 3 Green, 4 Blue, 5 Purple, 6 Pink.
 defaults write NSGlobalDomain AppleAccentColor -int 1
+# reverse: defaults delete NSGlobalDomain AppleAccentColor              (-> multicolour/blue)
 defaults write NSGlobalDomain AppleHighlightColor -string "1.000000 0.874510 0.701961 Orange"
+# reverse: defaults delete NSGlobalDomain AppleHighlightColor
 # Sidebar icon size: 1 Small, 2 Medium, 3 Large.
 defaults write NSGlobalDomain NSTableViewDefaultSizeMode -int 1
+# reverse: defaults delete NSGlobalDomain NSTableViewDefaultSizeMode    (-> Medium)
 # Allow window tinting from the wallpaper (closest reliable knob to the
 # Tahoe "Liquid Glass / Tinted" look; the exact icon-style key is not yet
 # stable — set "Tinted" in System Settings > Appearance if this isn't enough).
 defaults write NSGlobalDomain AppleReduceDesktopTinting -bool false
+# reverse: defaults delete NSGlobalDomain AppleReduceDesktopTinting
 
-# --- Keyboard: fast key repeat, no press-and-hold accent popup. ---
-defaults write NSGlobalDomain KeyRepeat -int 2
-defaults write NSGlobalDomain InitialKeyRepeat -int 15
+# --- Keyboard: fastest key repeat, no press-and-hold accent popup. ---
+defaults write NSGlobalDomain KeyRepeat -int 1
+# reverse: defaults delete NSGlobalDomain KeyRepeat                     (-> default ~6)
+defaults write NSGlobalDomain InitialKeyRepeat -int 13
+# reverse: defaults delete NSGlobalDomain InitialKeyRepeat             (-> default ~25)
 defaults write NSGlobalDomain ApplePressAndHoldEnabled -bool false
+# reverse: defaults delete NSGlobalDomain ApplePressAndHoldEnabled     (-> accent popup back)
 
 # --- Finder: show all extensions, path + status bars, POSIX path title,
 # default to list view, search current folder, no extension-change nag. ---
 defaults write NSGlobalDomain AppleShowAllExtensions -bool true
+# reverse: defaults delete NSGlobalDomain AppleShowAllExtensions
 defaults write com.apple.finder AppleShowAllFiles -bool true
+# reverse: defaults delete com.apple.finder AppleShowAllFiles          (-> hide dotfiles)
 defaults write com.apple.finder ShowPathbar -bool true
+# reverse: defaults delete com.apple.finder ShowPathbar
 defaults write com.apple.finder ShowStatusBar -bool true
+# reverse: defaults delete com.apple.finder ShowStatusBar
 defaults write com.apple.finder _FXShowPosixPathInTitle -bool true
+# reverse: defaults delete com.apple.finder _FXShowPosixPathInTitle
 defaults write com.apple.finder FXPreferredViewStyle -string "Nlsv"
+# reverse: defaults delete com.apple.finder FXPreferredViewStyle       (-> icon view)
 defaults write com.apple.finder FXDefaultSearchScope -string "SCcf"
+# reverse: defaults delete com.apple.finder FXDefaultSearchScope       (-> search This Mac)
 defaults write com.apple.finder FXEnableExtensionChangeWarning -bool false
+# reverse: defaults delete com.apple.finder FXEnableExtensionChangeWarning
 
 # --- Don't write .DS_Store on network or USB volumes. ---
 defaults write com.apple.desktopservices DSDontWriteNetworkStores -bool true
+# reverse: defaults delete com.apple.desktopservices DSDontWriteNetworkStores
 defaults write com.apple.desktopservices DSDontWriteUSBStores -bool true
+# reverse: defaults delete com.apple.desktopservices DSDontWriteUSBStores
 
 # --- Screenshots -> ~/Pictures/Screenshots, PNG, no shadow. ---
 mkdir -p "$HOME/Pictures/Screenshots"
 defaults write com.apple.screencapture location -string "$HOME/Pictures/Screenshots"
+# reverse: defaults delete com.apple.screencapture location            (-> Desktop)
 defaults write com.apple.screencapture type -string "png"
+# reverse: defaults delete com.apple.screencapture type                (-> png anyway)
 defaults write com.apple.screencapture disable-shadow -bool true
+# reverse: defaults delete com.apple.screencapture disable-shadow      (-> window shadow back)
 
 # --- Expand save/print panels by default. ---
 defaults write NSGlobalDomain NSNavPanelExpandedStateForSaveMode -bool true
+# reverse: defaults delete NSGlobalDomain NSNavPanelExpandedStateForSaveMode
 defaults write NSGlobalDomain PMPrintingExpandedStateForPrint -bool true
+# reverse: defaults delete NSGlobalDomain PMPrintingExpandedStateForPrint
 
 # --- Trackpad: tap to click, three-finger drag. ---
 defaults write com.apple.AppleMultitouchTrackpad Clicking -bool true
+# reverse: defaults delete com.apple.AppleMultitouchTrackpad Clicking
 defaults -currentHost write NSGlobalDomain com.apple.mouse.tapBehavior -int 1
+# reverse: defaults -currentHost delete NSGlobalDomain com.apple.mouse.tapBehavior
 defaults write com.apple.AppleMultitouchTrackpad TrackpadThreeFingerDrag -bool true
+# reverse: defaults delete com.apple.AppleMultitouchTrackpad TrackpadThreeFingerDrag
 
-# --- Dock: autohide, no delay, smaller icons, no recents, scale effect. ---
+# --- Dock: autohide instant, smaller icons, no recents, no animations. ---
 defaults write com.apple.dock autohide -bool true
+# reverse: defaults delete com.apple.dock autohide                     (-> Dock always visible)
 defaults write com.apple.dock autohide-delay -float 0
+# reverse: defaults delete com.apple.dock autohide-delay               (-> reveal delay back)
+defaults write com.apple.dock autohide-time-modifier -float 0   # instant show/hide
+# reverse: defaults delete com.apple.dock autohide-time-modifier       (-> slide animation back)
 defaults write com.apple.dock tilesize -int 36
+# reverse: defaults delete com.apple.dock tilesize                     (-> default ~48)
 defaults write com.apple.dock show-recents -bool false
+# reverse: defaults delete com.apple.dock show-recents                 (-> recents shown)
 defaults write com.apple.dock mineffect -string "scale"
+# reverse: defaults delete com.apple.dock mineffect                    (-> genie)
 defaults write com.apple.dock mru-spaces -bool false
+# reverse: defaults delete com.apple.dock mru-spaces                   (-> auto-rearrange Spaces)
+defaults write com.apple.dock launchanim -bool false            # no app-launch bounce
+# reverse: defaults delete com.apple.dock launchanim                   (-> bounce back)
+defaults write com.apple.dock expose-animation-duration -float 0 # instant Mission Control
+# reverse: defaults delete com.apple.dock expose-animation-duration
+defaults write com.apple.dock springboard-show-duration -float 0 # instant Launchpad
+# reverse: defaults delete com.apple.dock springboard-show-duration
+defaults write com.apple.dock springboard-hide-duration -float 0
+# reverse: defaults delete com.apple.dock springboard-hide-duration
+defaults write com.apple.dock springboard-page-duration -float 0
+# reverse: defaults delete com.apple.dock springboard-page-duration
 
 # --- Menu bar clock: show date + seconds.
 # (Best-effort: on Sonoma+ the clock lives in Control Center and may ignore these.) ---
 defaults write com.apple.menuextra.clock ShowSeconds -bool true
+# reverse: defaults delete com.apple.menuextra.clock ShowSeconds
 defaults write com.apple.menuextra.clock ShowDate -int 1
+# reverse: defaults delete com.apple.menuextra.clock ShowDate
 
 # --- TextEdit: plain text, UTF-8 by default. ---
 defaults write com.apple.TextEdit RichText -int 0
+# reverse: defaults write com.apple.TextEdit RichText -int 1           (-> rich text)
 defaults write com.apple.TextEdit PlainTextEncoding -int 4
+# reverse: defaults delete com.apple.TextEdit PlainTextEncoding
 defaults write com.apple.TextEdit PlainTextEncodingForWrite -int 4
+# reverse: defaults delete com.apple.TextEdit PlainTextEncodingForWrite
 
 # --- Software Update: check daily. ---
 defaults write com.apple.SoftwareUpdate ScheduleFrequency -int 1
+# reverse: defaults delete com.apple.SoftwareUpdate ScheduleFrequency  (-> weekly, every 7)
 
 # --- Region & format (date/number/unit conventions). Opt-in: uncomment
 # if you want German-style formatting with an English UI. ---
@@ -88,11 +145,16 @@ if ! defaults read com.apple.HIToolbox AppleEnabledInputSources 2>/dev/null | gr
   defaults write com.apple.HIToolbox AppleEnabledInputSources -array-add \
     '{ "InputSourceKind" = "Keyboard Layout"; "KeyboardLayout Name" = "Persian"; }'
 fi
+# reverse: remove "Persian" in System Settings > Keyboard > Input Sources
+#          (the array isn't safely editable from a one-liner).
 
 # --- Caps Lock -> Control, applied globally to any keyboard (current or
 # future, internal or external) via hidutil. Session-only by itself, so
 # we also drop a LaunchAgent below to reapply it on every login. ---
 hidutil property --set '{"UserKeyMapping":[{"HIDKeyboardModifierMappingSrc":0x700000039,"HIDKeyboardModifierMappingDst":0x7000000E0}]}' >/dev/null || true
+# reverse (this session): hidutil property --set '{"UserKeyMapping":[]}'
+# reverse (permanent):    launchctl unload ~/Library/LaunchAgents/local.capslock-remap.plist
+#                         rm ~/Library/LaunchAgents/local.capslock-remap.plist
 
 mkdir -p "$HOME/Library/LaunchAgents"
 cat > "$HOME/Library/LaunchAgents/local.capslock-remap.plist" <<'EOF'
@@ -115,9 +177,38 @@ EOF
 launchctl unload "$HOME/Library/LaunchAgents/local.capslock-remap.plist" 2>/dev/null || true
 launchctl load "$HOME/Library/LaunchAgents/local.capslock-remap.plist" 2>/dev/null || true
 
-# --- Apply (best effort). cfprefsd needed for HIToolbox/input-source
-# changes to be picked up; Dock added so Dock-related tweaks take. ---
-killall cfprefsd Finder Dock SystemUIServer 2>/dev/null || true
+# --- Performance: kill UI animations for a snappier feel. -------------------
+# Window open/close + resize + Quick Look, all instant.
+defaults write NSGlobalDomain NSAutomaticWindowAnimationsEnabled -bool false
+# reverse: defaults delete NSGlobalDomain NSAutomaticWindowAnimationsEnabled
+defaults write NSGlobalDomain NSWindowResizeTime -float 0.001
+# reverse: defaults delete NSGlobalDomain NSWindowResizeTime
+defaults write -g QLPanelAnimationDuration -float 0
+# reverse: defaults delete -g QLPanelAnimationDuration
+defaults write com.apple.finder DisableAllAnimations -bool true
+# reverse: defaults delete com.apple.finder DisableAllAnimations
+# Reduce Motion + Reduce Transparency are the biggest win on Tahoe's glassy UI,
+# but live in the SIP-protected com.apple.universalaccess domain that `defaults`
+# refuses to write. Toggle by hand once: System Settings > Accessibility >
+# Display > "Reduce motion" + "Reduce transparency".
+# reverse: untick those same two switches in System Settings.
+echo "    NOTE: enable Reduce motion + Reduce transparency in"
+echo "          System Settings > Accessibility > Display (can't be scripted)."
+
+# --- Spotlight: disable indexing to free CPU/RAM. -----------------------------
+# WARNING: also disables ⌘Space app-launch + file search — use Raycast/Alfred.
+# `sudo -n` so an unattended apply never hangs on a password prompt; if it can't
+# elevate silently it prints the manual command.
+# reverse: sudo mdutil -a -i on    (re-enables indexing; first search rebuilds the index)
+if ! sudo -n mdutil -a -i off >/dev/null 2>&1; then
+  echo "    to finish Spotlight-off: run  sudo mdutil -a -i off  (needs admin)"
+fi
+
+# --- Apply. Flush pending writes to disk FIRST, then restart the UI apps so they
+# re-read them. (Restarting an app before its prefs are flushed can make it write
+# its stale copy back over your changes — hence the sync.) ---
+sync
+killall cfprefsd Finder Dock SystemUIServer ControlCenter 2>/dev/null || true
 
 echo "==> macOS defaults applied (some need logout/restart)"
 {{ end -}}
