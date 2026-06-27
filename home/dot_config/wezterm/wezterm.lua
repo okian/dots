@@ -215,16 +215,18 @@ end
 
 -- ── Mouse ─────────────────────────────────────────────────────────────────
 -- No title bar (window_decorations = "RESIZE"), so allow dragging the window
--- from anywhere with CTRL held. Plain click/drag still selects text.
+-- from anywhere with CMD held. Plain click/drag still selects text. CMD (not
+-- CTRL) because macOS captures CTRL+click as a system secondary-click, so a
+-- CTRL+Left drag never reaches WezTerm on some Macs.
 config.mouse_bindings = {
   {
     event = { Drag = { streak = 1, button = "Left" } },
-    mods = "CTRL",
+    mods = "SUPER",
     action = act.StartWindowDrag,
   },
   {
     event = { Down = { streak = 1, button = "Left" } },
-    mods = "CTRL",
+    mods = "SUPER",
     action = act.StartWindowDrag,
   },
 }
