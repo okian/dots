@@ -7,8 +7,9 @@ def _step [label: string, work: closure] {
   try { do $work } catch {|e| print $"   ! skipped: ($e.msg)" }
 }
 
-def "dots update" [] {
-  _step "chezmoi update (pull configs + apply)" { ^chezmoi update }
+# Upgrade every toolchain in place (no git pull / config apply). Shared by
+# `dots update` and the background auto-updater (`dots autoupdate`).
+def "dots upgrade" [] {
   _step "brew upgrade" { ^brew upgrade; ^brew cleanup }
   _step "rustup update" { ^rustup update }
   _step "swiftly update" { ^swiftly update --assume-yes }
@@ -20,7 +21,67 @@ def "dots update" [] {
     let doom = ($nu.home-dir | path join '.config' 'emacs' 'bin' 'doom')
     if ($doom | path exists) { ^$doom upgrade --force }
   }
+}
+
+def "dots update" [] {
+  _step "chezmoi update (pull configs + apply)" { ^chezmoi update }
+  dots upgrade
   print "==> done. Everything is at latest."
+}
+
+# --- Background auto-update (macOS LaunchAgent, every 4h) -------------------
+# A chezmoi-managed LaunchAgent (~/Library/LaunchAgents/com.kian.dots-autoupdate
+# .plist) runs `dots autoupdate run` on a timer; these subcommands manage it.
+# It only upgrades toolchains — it never pulls/applies config unattended.
+const autoupdate_label = "com.kian.dots-autoupdate"
+
+def _autoupdate_plist [] {
+  $nu.home-dir | path join 'Library' 'LaunchAgents' $"($autoupdate_label).plist"
+}
+def _autoupdate_log [] {
+  $nu.home-dir | path join '.local' 'state' 'dots' 'autoupdate.log'
+}
+def _autoupdate_domain [] { $"gui/(^id -u | str trim)" }
+
+# Invoked by launchd: one timestamped, unattended upgrade pass.
+def "dots autoupdate run" [] {
+  print $"================ dots autoupdate (date now | format date '%Y-%m-%d %H:%M:%S') ================"
+  dots upgrade
+  print "==> autoupdate done."
+}
+
+# Run an upgrade pass now, in the foreground (same work the timer does).
+def "dots autoupdate now" [] { dots upgrade }
+
+# (Re)load the LaunchAgent so the 4-hourly timer is active.
+def "dots autoupdate enable" [] {
+  let plist = (_autoupdate_plist)
+  if not ($plist | path exists) {
+    print "plist not installed yet — run `dots apply` first."; return
+  }
+  let domain = (_autoupdate_domain)
+  try { ^launchctl bootout $domain $plist } catch { }
+  ^launchctl bootstrap $domain $plist
+  print $"==> enabled — upgrades every 4h. Log: (_autoupdate_log)"
+}
+
+# Stop the timer (unload the LaunchAgent).
+def "dots autoupdate disable" [] {
+  try { ^launchctl bootout (_autoupdate_domain) (_autoupdate_plist) } catch { }
+  print "==> disabled."
+}
+
+# Is the timer loaded?
+def "dots autoupdate status" [] {
+  let hit = (^launchctl list | lines | find $autoupdate_label)
+  if ($hit | is-empty) { print "not loaded — run `dots autoupdate enable`." } else { $hit | print }
+}
+
+# Tail the auto-update log.
+def "dots autoupdate log" [n: int = 40] {
+  let log = (_autoupdate_log)
+  if not ($log | path exists) { print "no log yet (timer hasn't run)."; return }
+  open $log | lines | last $n | str join "\n" | print
 }
 
 # --- Repo / dotfiles management (one command, no raw chezmoi) ---------------
@@ -315,6 +376,8 @@ def "dots" [] {
   print ""
   print "  Maintenance:"
   print "    dots update          pull + apply + upgrade every toolchain"
+  print "    dots upgrade         upgrade toolchains only (no pull/apply)"
+  print "    dots autoupdate      background 4-hourly upgrades: enable|disable|status|log"
   print "    dots cd              jump into the dotfiles source dir"
   print "    dots managed         list every managed file"
   print "    dots doctor          diagnose the setup"

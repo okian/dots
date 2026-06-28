@@ -1,0 +1,49 @@
+{{- $brew := "/opt/homebrew" -}}
+{{- if ne .chezmoi.arch "arm64" }}{{- $brew = "/usr/local" -}}{{- end -}}
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+  <key>Label</key>
+  <string>com.kian.dots-autoupdate</string>
+
+  <!-- Upgrade every toolchain (brew, nvim, rustup, uv, npm, doom, …) on a timer.
+       Reuses `dots upgrade` so there's one source of truth for what gets updated. -->
+  <key>ProgramArguments</key>
+  <array>
+    <string>{{ $brew }}/bin/nu</string>
+    <string>-c</string>
+    <string>source {{ .chezmoi.homeDir }}/.config/nushell/dots.nu; dots autoupdate run</string>
+  </array>
+
+  <!-- launchd starts jobs with a minimal environment, so spell out PATH. -->
+  <key>EnvironmentVariables</key>
+  <dict>
+    <key>HOME</key>
+    <string>{{ .chezmoi.homeDir }}</string>
+    <key>PATH</key>
+    <string>{{ $brew }}/bin:{{ $brew }}/sbin:{{ .chezmoi.homeDir }}/.local/bin:{{ .chezmoi.homeDir }}/.cargo/bin:{{ .chezmoi.homeDir }}/go/bin:/usr/bin:/bin:/usr/sbin:/sbin</string>
+  </dict>
+
+  <!-- Every 4 hours (14400s). launchd coalesces missed runs (sleep) into one. -->
+  <key>StartInterval</key>
+  <integer>14400</integer>
+
+  <!-- Don't fire during `chezmoi apply`; first run is one interval after load. -->
+  <key>RunAtLoad</key>
+  <false/>
+
+  <!-- Be a good citizen: low priority, throttled I/O, niced. -->
+  <key>ProcessType</key>
+  <string>Background</string>
+  <key>LowPriorityIO</key>
+  <true/>
+  <key>Nice</key>
+  <integer>10</integer>
+
+  <key>StandardOutPath</key>
+  <string>{{ .chezmoi.homeDir }}/.local/state/dots/autoupdate.log</string>
+  <key>StandardErrorPath</key>
+  <string>{{ .chezmoi.homeDir }}/.local/state/dots/autoupdate.log</string>
+</dict>
+</plist>

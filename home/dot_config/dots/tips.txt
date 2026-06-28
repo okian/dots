@@ -42,6 +42,7 @@ Commits auto-rebase on pull and push auto-sets upstream — no `-u` needed.
 
 # --- maintenance & tooling ---
 `dots update` upgrades configs + every toolchain (brew, rust, swift, uv, nvim, doom).
+On macOS, `dots autoupdate` runs `dots upgrade` every 4h in the background — `status`/`log` to peek.
 `chezmoi edit ~/.zshrc` then `chezmoi apply` — never edit managed dotfiles in place.
 `chezmoi re-add` pulls a machine-local change back into the repo; then push it.
 Add a secret with `dots secret-add <path>` — it's encrypted before it touches git.

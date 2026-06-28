@@ -62,7 +62,22 @@ chezmoi execute-template < home/run_onchange_after_20-languages.sh.tmpl   # rend
 chezmoi cat ~/.config/git/config   # show what a target file would render to
 chezmoi update                     # git pull + apply
 dots update                  # apply + upgrade every toolchain (defined in nushell/dots.nu)
+dots upgrade                  # toolchains only, no git pull/apply (shared by the background updater)
+dots autoupdate {enable,disable,status,log}   # macOS LaunchAgent that runs `dots upgrade` every 4h
 ```
+
+## Background auto-update (macOS LaunchAgent)
+
+`home/Library/LaunchAgents/com.kian.dots-autoupdate.plist.tmpl` is a launchd
+agent (macOS-only via the `Library/` gate in `.chezmoiignore`) that runs
+`dots autoupdate run` → `dots upgrade` every 4h (`StartInterval` 14400s),
+logging to `~/.local/state/dots/autoupdate.log`. It upgrades **toolchains only**
+— it never does `chezmoi update`/git pull, so it can't apply remote config
+unattended. `run_onchange_after_47-autoupdate.sh.tmpl` (re)bootstraps the agent
+whenever the rendered plist changes (it embeds the plist's `sha256`, like the
+Doom wiring) and creates the log dir. The agent calls nushell with an explicit
+`PATH` (launchd's env is minimal) and `source`s `dots.nu` to reach the subcommand.
+`dots autoupdate {enable,disable,status,log,now}` are the front-ends.
 
 The `dots` command (nushell) is also the user-facing wrapper over chezmoi for
 daily repo management — `dots {edit,diff,apply,add,show,pull,save,status,cd,log,managed,doctor}`

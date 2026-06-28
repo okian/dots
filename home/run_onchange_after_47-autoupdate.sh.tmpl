@@ -1,0 +1,27 @@
+#!/usr/bin/env bash
+# Background auto-update: (re)load the LaunchAgent whenever its plist changes.
+# macOS only — Linux has no launchd (cron/systemd users can wire `dots upgrade`).
+set -euo pipefail
+{{ if .isMac -}}
+LABEL="com.kian.dots-autoupdate"
+PLIST="$HOME/Library/LaunchAgents/${LABEL}.plist"
+DOMAIN="gui/$(id -u)"
+
+# StandardOutPath/StandardErrorPath need their dir to exist or launchd won't run.
+mkdir -p "$HOME/.local/state/dots"
+
+if [ -f "$PLIST" ]; then
+  echo "==> (re)loading ${LABEL}"
+  launchctl bootout "$DOMAIN" "$PLIST" 2>/dev/null || true
+  launchctl bootstrap "$DOMAIN" "$PLIST" 2>/dev/null \
+    || launchctl load -w "$PLIST" 2>/dev/null || true
+  echo "==> autoupdate scheduled (every 4h) — \`dots autoupdate status\` to check"
+else
+  echo "==> ${PLIST} not found; skipping"
+fi
+{{ else -}}
+echo "==> autoupdate: macOS only; skipping"
+{{ end -}}
+
+# Change detection: re-run (hence reload launchd) whenever the plist changes.
+# {{ include "Library/LaunchAgents/com.kian.dots-autoupdate.plist.tmpl" | sha256sum }}

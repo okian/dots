@@ -23,6 +23,8 @@ View anytime with `dots cheatsheet`.
 | `dots save [msg]` | stage everything, commit & push (↑) |
 | `dots status` | uncommitted changes + pending apply |
 | `dots update` | pull + apply + upgrade **every** toolchain |
+| `dots upgrade` | upgrade toolchains only (no pull/apply) |
+| `dots autoupdate` | background 4-hourly upgrades (macOS): `enable`/`disable`/`status`/`log` |
 | `dots cd` | jump into the dotfiles source dir |
 | `dots managed` / `doctor` / `log` | list managed files / diagnose / history |
 

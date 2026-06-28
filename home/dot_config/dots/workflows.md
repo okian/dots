@@ -75,7 +75,12 @@ A two-step rhythm beats scrolling: **filter to candidates, then act.**
 ## Keeping the machine current
 
 - **One command:** `dots update` — pulls config changes and upgrades brew,
-  rust, swift, uv/python, Neovim plugins, and Doom.
+  rust, swift, uv/python, Neovim plugins, and Doom. `dots upgrade` does the
+  toolchain half only (no git pull / config apply).
+- **Hands-off (macOS):** a LaunchAgent runs `dots upgrade` every 4 hours in the
+  background. `dots autoupdate status` shows it; `dots autoupdate log` tails the
+  run log; `dots autoupdate disable`/`enable` turns it off/on. It only upgrades
+  toolchains — it never pulls or applies config unattended.
 - **Change configs the chezmoi way:** `chezmoi edit ~/.config/nvim/init.lua` →
   `chezmoi apply`. To preview, `chezmoi diff`. Never hand-edit a managed file in
   place — your next `apply` would revert it.
