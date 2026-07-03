@@ -13,10 +13,13 @@ def _step [label: string, work: closure] {
 # app bundles (wezterm, zed, …) while they're running — casks only upgrade
 # when a human runs `dots update`.
 def "dots upgrade" [--formulae-only] {
+  # `--yes` skips Homebrew's cask-upgrade confirmation prompt (ask mode is the
+  # default since brew 6): `dots upgrade` always proceeds, and the unattended
+  # launchd run can never hang waiting on a [y/n].
   if $formulae_only {
-    _step "brew upgrade (formulae only)" { ^brew upgrade --formula; ^brew cleanup }
+    _step "brew upgrade (formulae only)" { ^brew upgrade --yes --formula; ^brew cleanup }
   } else {
-    _step "brew upgrade" { ^brew upgrade; ^brew cleanup }
+    _step "brew upgrade" { ^brew upgrade --yes; ^brew cleanup }
   }
   _step "rustup update" { ^rustup update }
   _step "swiftly update" { ^swiftly update --assume-yes }
