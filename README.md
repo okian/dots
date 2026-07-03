@@ -99,17 +99,19 @@ Drop your own files into these locations, then `chezmoi apply` (or `dots update`
 
 | Action | Command |
 |--------|---------|
-| Edit a config | `chezmoi edit ~/.config/nvim/init.lua` |
-| Preview pending changes | `chezmoi diff` |
-| Apply local edits | `chezmoi apply` |
-| Pull latest + apply | `chezmoi update` |
-| Capture a machine change back | `chezmoi re-add` then `chezmoi git -- push` |
-| Add/remove a package | edit `packages.yaml` → `chezmoi apply` (auto re-installs) |
+| Edit a config | `dots edit ~/.config/nvim/init.lua` (edits source + applies) |
+| Preview pending changes | `dots diff` |
+| Apply local edits | `dots apply` |
+| Pull latest + apply | `dots pull` |
+| Capture a machine change back | `dots readd` then `dots save` |
+| Add/remove a package | `dots packages` (edits `packages.yaml`, auto re-installs) |
 | **Upgrade everything to latest** | `dots update` |
 
 `dots update` runs: `chezmoi update` → `brew upgrade && brew cleanup` →
-`rustup update` → `swiftly update` → `uv self update` → neovim plugin sync →
-`doom upgrade`.
+`rustup update` → `swiftly update` → uv python/tools → npm globals →
+cargo/go tools → neovim plugin sync → `doom upgrade`. On macOS a LaunchAgent
+repeats the toolchain half every 4h (`dots autoupdate`), formulae-only so
+GUI apps are never swapped while running.
 
 ## Secrets (encrypted, in a public repo)
 
@@ -154,21 +156,33 @@ own hooks (husky / pre-commit framework) set a local `core.hooksPath` that
 transparently overrides this; otherwise the global hooks also **chain** to any
 `.git/hooks/<name>` or `.husky/<name>` they find.
 
-Hooks auto-detect repo languages (**go, rust, swift, node, python, jvm** — zero or
-more) and run only what applies:
+Hooks auto-detect repo languages (**go, rust, swift, node, python, jvm, shell,
+docker, terraform, k8s** — zero or more) and run only what applies:
 
 | Hook | What it does |
 |------|--------------|
-| **pre-commit** | secret scan (gitleaks → regex fallback), large-file guard, block direct commits to protected branches, format-check staged files |
+| **pre-commit** | secret scan (gitleaks → regex fallback), large-file guard, block direct commits to protected branches, format/lint staged files, spell-check (typos), validate k8s manifests (kubeconform) |
+| **prepare-commit-msg** | auto-insert the branch's ticket key into the subject (`feat/ROG-1-x` → `ROG-1: …`) |
 | **commit-msg** | require a ticket key (`ROG-22827`) and/or Conventional Commits; subject length; skips merge/revert/fixup |
-| **pre-push** | block force/non-ff (and optionally any) push to protected branches; run lint + the fast test suite |
+| **pre-push** | block force/non-ff (and optionally any) push to protected branches, block WIP/fixup commits, run lint + the fast test suite |
 | **pre-rebase** | refuse to rebase protected or already-published branches |
 | **post-checkout / post-merge** | remind (or auto-run) when dependency manifests changed (`go.mod`, `Cargo.toml`, `package.json`, `Package.swift`, `build.gradle.kts`, …) |
 
-Per-language actions: `gofmt`/`go vet`/`golangci-lint`/`go test -short`,
+Per-language actions: `gofumpt`/`goimports`/`golangci-lint`/`staticcheck`/`go test -short`/`go mod tidy`,
 `cargo fmt`/`clippy`/`cargo test`, `swiftformat`/`swiftlint`/`swift test`,
-prettier/`<pm> run lint`/`<pm> test`, `ruff`/`pytest`, `ktlint`. Missing tools
-degrade to a skip — they never hard-fail a commit.
+prettier/`<pm> run lint`/`<pm> test`, `ruff`/`pytest`, `ktlint`, shell
+`shellcheck` (+ opt-in `shfmt`), `hadolint`, `tofu fmt`/`tflint`/`trivy config`,
+`kubeconform`/`helm lint`/`conftest`. Missing tools degrade to a skip — they
+never hard-fail a commit.
+
+**Default linter configs.** When a repo has no linter config of its own, the
+hooks apply a shipped **conservative** default (`~/.config/git/hooks/linters/`)
+so bare repos get a uniform, sensible baseline instead of each tool's built-in
+behavior. A repo-local config **always wins** (e.g. `.golangci.yml`,
+`ruff.toml`, or `[tool.ruff]` in `pyproject.toml`). Currently shipped:
+golangci-lint (v2 — the `standard` set plus `bodyclose`/`misspell`/`unconvert`)
+and ruff (`E`/`F`/`W`/`I`). Turn defaults off with
+`git config hooks.useDefaultLinterConfig false`.
 
 **Configure** globally in `~/.config/git/hooks.conf`, or per-repo with
 `git config hooks.<key> <value>` (full table in that file). **Bypass:**
@@ -196,7 +210,7 @@ same repo just works on both.
 |---------|-----|
 | `chezmoi apply` failed partway | It's idempotent — just re-run `chezmoi apply`. Inspect first with `chezmoi diff`. |
 | A `run_onchange_` script won't re-run after I edited what it installs | It only re-runs when its *rendered* content changes. Force every one: `chezmoi state delete-bucket --bucket=scriptState && chezmoi apply`. |
-| A managed dotfile got hand-edited and looks wrong | `chezmoi apply` overwrites it back to repo state. To keep the local change instead: `chezmoi re-add`. |
+| A managed dotfile got hand-edited and looks wrong | `dots apply` overwrites it back to repo state. To keep the local change instead: `dots readd`. |
 | A git hook is blocking a commit/push I need to land | One-off: `git commit/push --no-verify`. Skip just tests: `HOOKS_SKIP_TESTS=1 git push`. All hooks off: `dots hooks disable`. |
 | Committing to `main` is blocked | Expected. Branch (`git switch -c feat/ROG-123-x`) or, for a solo repo, `git config hooks.allowProtected true`. |
 | New fonts don't show up | `chezmoi apply` (runs the font script). Linux: `fc-cache -f`. macOS: reopen the app. Check `~/Library/Fonts` / `~/.local/share/fonts`. |

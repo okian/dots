@@ -8,14 +8,23 @@ def _step [label: string, work: closure] {
 }
 
 # Upgrade every toolchain in place (no git pull / config apply). Shared by
-# `dots update` and the background auto-updater (`dots autoupdate`).
-def "dots upgrade" [] {
-  _step "brew upgrade" { ^brew upgrade; ^brew cleanup }
+# `dots update` and the background auto-updater (`dots autoupdate`), which
+# passes --formulae-only: an unattended `brew upgrade` would also replace GUI
+# app bundles (wezterm, zed, …) while they're running — casks only upgrade
+# when a human runs `dots update`.
+def "dots upgrade" [--formulae-only] {
+  if $formulae_only {
+    _step "brew upgrade (formulae only)" { ^brew upgrade --formula; ^brew cleanup }
+  } else {
+    _step "brew upgrade" { ^brew upgrade; ^brew cleanup }
+  }
   _step "rustup update" { ^rustup update }
   _step "swiftly update" { ^swiftly update --assume-yes }
   _step "uv: install latest python (uv itself updated by brew above)" { ^uv python install }
   _step "uv tools upgrade (pytest, mypy, …)" { ^uv tool upgrade --all }
   _step "npm global tools update" { ^npm update -g }
+  _step "cargo tools update (cargo install-update)" { ^cargo install-update -a }
+  _step "go tools update (gup)" { ^gup update }
   _step "neovim plugin sync" { ^nvim --headless "+Lazy! sync" +qa }
   _step "doom upgrade" {
     let doom = ($nu.home-dir | path join '.config' 'emacs' 'bin' 'doom')
@@ -43,10 +52,25 @@ def _autoupdate_log [] {
 }
 def _autoupdate_domain [] { $"gui/(^id -u | str trim)" }
 
-# Invoked by launchd: one timestamped, unattended upgrade pass.
+# Keep the log bounded: launchd appends to it forever, so past ~512KB keep only
+# the tail. Truncate IN PLACE (shell `>`), never replace the file — launchd
+# holds an open fd on it, and a new inode would orphan every future write.
+def _autoupdate_rotate [] {
+  let log = (_autoupdate_log)
+  if not ($log | path exists) { return }
+  if ((ls $log | first | get size) < 512kb) { return }
+  let tmp = (mktemp -t "dots-autoupdate.XXXXX")
+  (open --raw $log | lines | last 2000 | str join "\n") + "\n" | save -f $tmp
+  ^sh -c $"cat '($tmp)' > '($log)'"
+  rm -f $tmp
+}
+
+# Invoked by launchd: one timestamped, unattended upgrade pass (CLI toolchains
+# only — casks wait for an interactive `dots update`).
 def "dots autoupdate run" [] {
+  _autoupdate_rotate
   print $"================ dots autoupdate (date now | format date '%Y-%m-%d %H:%M:%S') ================"
-  dots upgrade
+  dots upgrade --formulae-only
   print "==> autoupdate done."
 }
 
@@ -71,10 +95,26 @@ def "dots autoupdate disable" [] {
   print "==> disabled."
 }
 
-# Is the timer loaded?
+# Is the timer loaded — and when did it last run, with what result?
 def "dots autoupdate status" [] {
   let hit = (^launchctl list | lines | find $autoupdate_label)
-  if ($hit | is-empty) { print "not loaded — run `dots autoupdate enable`." } else { $hit | print }
+  if ($hit | is-empty) { print "not loaded — run `dots autoupdate enable`."; return }
+  print "loaded:    yes (runs every 4h)"
+  let exit_line = (try {
+    ^launchctl print $"(_autoupdate_domain)/($autoupdate_label)" err> /dev/null
+      | lines | where {|l| $l | str contains "last exit code" } | first | str trim
+  } catch { "" })
+  if ($exit_line | is-not-empty) { print $"($exit_line)" }
+  let log = (_autoupdate_log)
+  if not ($log | path exists) { print "log:       none yet (timer hasn't fired)"; return }
+  let banners = (open --raw $log | lines
+    | where {|l| $l | str starts-with "================ dots autoupdate" })
+  if ($banners | is-not-empty) {
+    let ts = ($banners | last | str replace --all '=' '' | str trim
+      | str replace 'dots autoupdate ' '')
+    print $"last run:  ($ts)"
+  }
+  print $"log:       ($log) ((ls $log | first | get size))"
 }
 
 # Tail the auto-update log.
@@ -121,6 +161,27 @@ def "dots add" [path: string] {
 # Stop managing a file (leaves it in $HOME, removes it from the repo).
 def "dots forget" [path: string] { _need; ^chezmoi forget $path }
 
+# Capture machine-local edits to managed files back into the repo (the reverse
+# of apply). No args = every modified managed file; or name specific ones.
+def "dots readd" [...path: string] {
+  _need
+  ^chezmoi re-add ...$path
+  print "==> captured local change(s) into the repo — review: `dots status`, publish: `dots save`."
+}
+
+# Edit packages.yaml — the single source of truth for installed tools — and
+# apply if it changed (the run_onchange installers re-run automatically).
+# It lives in .chezmoidata/, which `dots edit` can't reach (not a managed target).
+def "dots packages" [] {
+  _need
+  let f = (^chezmoi source-path | str trim | path join '.chezmoidata' 'packages.yaml')
+  let before = (open --raw $f | hash sha256)
+  ^$env.EDITOR $f
+  if (open --raw $f | hash sha256) == $before { print "no changes."; return }
+  ^chezmoi apply
+  print "==> applied — installers re-ran for the changed lists."
+}
+
 # Pull the latest from the remote and apply (git pull + apply). The downward
 # counterpart to `save`. (`dots update` also upgrades every toolchain.)
 def "dots pull" [] { _need; ^chezmoi update; print "==> pulled & applied." }
@@ -128,6 +189,13 @@ def "dots pull" [] { _need; ^chezmoi update; print "==> pulled & applied." }
 # Save ALL local repo changes upward: stage everything, commit, push.
 def "dots save" [message?: string] {
   _need
+  # The repo's own global hooks would block this on a fresh machine: a direct
+  # commit to `main`, with no ticket key in the default message. This is the
+  # documented solo-repo escape hatch — set it repo-locally, once.
+  if (^chezmoi git -- config --get hooks.allowProtected | complete | get exit_code) != 0 {
+    ^chezmoi git -- config hooks.allowProtected true
+    ^chezmoi git -- config hooks.ticketRequired false
+  }
   let dirty = (^chezmoi git -- status --porcelain | str trim)
   if ($dirty | is-empty) { print "nothing to save — the repo is clean."; return }
   ^chezmoi git -- add -A
@@ -156,8 +224,27 @@ def "dots log" [n: int = 15] { _need; ^chezmoi git -- log --oneline -n $n }
 # List every file this repo manages.
 def "dots managed" [] { _need; ^chezmoi managed }
 
-# Diagnose the chezmoi/toolchain setup.
-def "dots doctor" [] { _need; ^chezmoi doctor }
+# Diagnose the setup: chezmoi's own checks, then this repo's machinery on top
+# (the layers `chezmoi doctor` knows nothing about).
+def "dots doctor" [] {
+  _need
+  ^chezmoi doctor
+  print ""
+  print "── dots checks ──"
+  let chk = {|cond, label, hint|
+    if $cond { print $"  ✓ ($label)" } else { print $"  ! ($label) — ($hint)" }
+  }
+  do $chk (($nu.home-dir | path join '.config' 'chezmoi' 'key.txt') | path exists) "age key present" "secrets are skipped on this machine (fine if intended); `dots secrets-setup`"
+  do $chk ((^git config --global --get core.hooksPath | complete | get stdout | str trim | str ends-with '.config/git/hooks')) "global git hooks wired" "run `dots apply` (sets core.hooksPath)"
+  do $chk (($nu.home-dir | path join '.config' 'git' 'conf.d' 'identities.gitconfig') | path exists) "per-entity git identities generated" "run `dots git-identity sync`"
+  do $chk (($nu.home-dir | path join '.config' 'dots' 'theme') | path exists) "color theme generated" "run `dots theme` to pick one"
+  let vendor = ($nu.data-dir | path join 'vendor' 'autoload')
+  do $chk ((['starship.nu' 'zoxide.nu' 'carapace.nu' 'tv.nu'] | all {|f| ($vendor | path join $f | path exists) })) "shell integrations generated (starship/zoxide/carapace/tv)" "run `dots apply`"
+  do $chk (($nu.user-autoload-dirs | first | path join 'zi-tv.nu') | path exists) "tv-backed `zi` override" "run `dots apply`"
+  if ($nu.os-info.name == 'macos') {
+    do $chk ((^launchctl list | lines | find $autoupdate_label | is-not-empty)) "autoupdate timer loaded" "run `dots autoupdate enable`"
+  }
+}
 
 # --- Secrets (age encryption) ----------------------------------------------
 
@@ -306,7 +393,7 @@ def "dots hooks status" [] {
   let disabled = (^git config --global --get hooks.disable | str trim)
   print $"enabled:   (if $disabled == 'true' { 'no (hooks.disable=true)' } else { 'yes' })"
   print "tools:"
-  for t in [gitleaks golangci-lint swiftlint swiftformat ruff ktlint shellcheck git-lfs] {
+  for t in [gitleaks golangci-lint staticcheck gofumpt ruff swiftlint swiftformat ktlint shellcheck shfmt hadolint tofu tflint trivy kubeconform helm conftest typos git-lfs] {
     print $"  (if (which $t | is-not-empty) { '✓' } else { '·' }) ($t)"
   }
 }
@@ -361,6 +448,7 @@ def "dots" [] {
   print "    dots diff            preview pending changes to your home dir"
   print "    dots apply           apply your local edits to your home dir"
   print "    dots add <p>         start managing a file  (secrets: dots secret-add)"
+  print "    dots readd [p]       capture local edits to managed files back into the repo"
   print "    dots forget <p>      stop managing a file"
   print "    dots show <file>     show a file's fully rendered content"
   print ""
@@ -377,6 +465,7 @@ def "dots" [] {
   print "  Maintenance:"
   print "    dots update          pull + apply + upgrade every toolchain"
   print "    dots upgrade         upgrade toolchains only (no pull/apply)"
+  print "    dots packages        edit packages.yaml; auto-applies if changed"
   print "    dots autoupdate      background 4-hourly upgrades: enable|disable|status|log"
   print "    dots cd              jump into the dotfiles source dir"
   print "    dots managed         list every managed file"

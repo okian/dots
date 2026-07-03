@@ -18,13 +18,15 @@ View anytime with `dots cheatsheet`.
 | `dots diff` | preview pending changes to your home dir |
 | `dots apply` | apply your local edits |
 | `dots add <p>` | start managing a file (`--encrypt` for secrets) |
+| `dots readd [p]` | capture machine-local edits to managed files back into the repo |
 | `dots show <file>` | show a file's fully rendered content |
 | `dots pull` | get latest from the remote and apply (↓) |
 | `dots save [msg]` | stage everything, commit & push (↑) |
 | `dots status` | uncommitted changes + pending apply |
 | `dots update` | pull + apply + upgrade **every** toolchain |
 | `dots upgrade` | upgrade toolchains only (no pull/apply) |
-| `dots autoupdate` | background 4-hourly upgrades (macOS): `enable`/`disable`/`status`/`log` |
+| `dots packages` | edit packages.yaml; auto-applies (installers re-run) if changed |
+| `dots autoupdate` | background 4-hourly CLI upgrades (macOS): `enable`/`disable`/`status`/`log` |
 | `dots cd` | jump into the dotfiles source dir |
 | `dots managed` / `doctor` / `log` | list managed files / diagnose / history |
 
@@ -72,8 +74,8 @@ shell, `:colorscheme <name>` for a running nvim). The choice lives in
 | `ports` | listening TCP ports + the owning process |
 | `killp` | fuzzy-pick a running process and kill it |
 | `gcap "msg"` | git add -A → commit → push, in one shot |
-| `y` | open yazi; cd's to wherever you quit it |
-| `z <dir>` | jump to a frecent directory (zoxide); `zi` = interactive |
+| `y` | open yazi; cd's to wherever you quit it — inside, `z`/`Z` fuzzy-jump via tv |
+| `z <dir>` | jump to a frecent directory (zoxide); `zi` = interactive picker (tv) |
 | `dots update` | upgrade configs + all toolchains to latest |
 | `dots tip` / `tips` | random / all usage tips |
 | `dots cheatsheet` | open this file |

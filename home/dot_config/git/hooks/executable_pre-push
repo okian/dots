@@ -25,6 +25,31 @@ while read -r local_ref local_sha remote_ref remote_sha; do
   rbranch="${remote_ref#refs/heads/}"
   [ "$rbranch" = "$remote_ref" ] && continue # not a branch (tag, note, etc.)
 
+  # --- Block pushing WIP / un-squashed fixup commits --------------------------
+  if cfg_bool blockWip true; then
+    # New remote branch (remote_sha zero) → everything not already on a remote;
+    # otherwise just the commits this push adds.
+    if is_zero_sha "$remote_sha"; then range=("$local_sha" --not --remotes)
+    else range=("$remote_sha..$local_sha"); fi
+    tpat=$(cfg ticketPattern "$HOOKS_TICKET_PATTERN")
+    wip=""
+    while IFS= read -r subj; do
+      # Strip an auto-inserted leading ticket ("ROG-1: WIP") before matching.
+      stripped=$(printf '%s' "$subj" | sed -E "s/^(${tpat})[:) ]*//")
+      if printf '%s' "$stripped" | grep -Eq '^(WIP|Wip|wip)( |:|$)|^(fixup!|squash!)'; then
+        wip="$wip$subj
+"
+      fi
+    done < <(git log --format='%s' "${range[@]}" 2>/dev/null)
+    if [ -n "$wip" ]; then
+      hook_err "refusing to push WIP/fixup/squash commits to '$rbranch':"
+      printf '%s' "$wip" | sed 's/^/    /' >&2
+      hook_hint "finish or squash them (git rebase -i --autosquash), or: git push --no-verify"
+      hook_hint "disable: git config hooks.blockWip false"
+      fail=1
+    fi
+  fi
+
   if is_protected "$rbranch"; then
     # Block ALL pushes to protected, if policy says so.
     if cfg_bool blockPushToProtected false \

@@ -58,6 +58,14 @@ command -v direnv   >/dev/null && eval "$(direnv hook zsh)"
 command -v carapace >/dev/null && { export CARAPACE_BRIDGES='zsh,fish,bash'; source <(carapace _carapace zsh); }
 # television: Ctrl-T (smart autocomplete) + Ctrl-R (history) — replaces fzf+atuin.
 command -v tv       >/dev/null && eval "$(tv init zsh)"
+# zi via television — zoxide's built-in interactive mode requires fzf, which tv
+# replaces here (nushell gets the same override via its user autoload dir).
+if command -v zoxide >/dev/null && command -v tv >/dev/null; then
+  zi() {
+    local d
+    d="$(zoxide query --list --exclude "$PWD" -- "$@" | tv)" && [ -n "$d" ] && cd "$d"
+  }
+fi
 
 # zsh-autosuggestions + fast-syntax-highlighting (load highlighting LAST)
 _brew_prefix="$(brew --prefix 2>/dev/null)"

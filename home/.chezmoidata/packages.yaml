@@ -68,6 +68,7 @@ packages:
     - ktlint
     - shellcheck
     - shfmt
+    - hadolint      # Dockerfile linter (pre-commit hook)
     # media
     - ffmpeg
     # languages / runtimes managed via brew (latest)
@@ -109,6 +110,13 @@ packages:
     # kubernetes (KUBE_EDITOR already points at nvim)
     - kubernetes-cli  # kubectl
     - k9s             # cluster TUI
+    - helm            # chart tooling; `helm lint` in pre-push
+    - kubeconform     # manifest schema validation (pre-commit hook)
+    - conftest        # OPA/rego policy checks (opt-in: hooks.k8sPolicy)
+    # terraform / IaC (git-hook linters: `tofu fmt`, tflint, `trivy config`)
+    - opentofu        # `tofu` — Terraform-compatible IaC CLI
+    - tflint          # Terraform linter (pre-push)
+    - terraform-docs  # README freshness check (opt-in: hooks.tfDocs)
     # container / security
     - trivy         # CVE + secret scanner (images, repos, IaC)
     - dive          # inspect container image layers
@@ -179,12 +187,16 @@ packages:
     - golang.org/x/tools/gopls@latest           # language server
     - github.com/go-delve/delve/cmd/dlv@latest  # debugger
     - mvdan.cc/gofumpt@latest                    # stricter gofmt
+    - honnef.co/go/tools/cmd/staticcheck@latest  # linter (golangci-lint fallback)
+    - github.com/nao1215/gup@latest              # bulk-update go tools (dots upgrade)
 
   # Rust: extra cargo binaries (clippy/rustfmt/rust-analyzer are rustup components).
   cargo_tools:
     - cargo-edit        # cargo add/rm/upgrade
     - cargo-nextest     # faster test runner
     - cargo-watch       # re-run on file change
+    - cargo-update      # `cargo install-update -a` — refresh this list (dots upgrade)
+    - typos-cli         # source-code spell checker (`typos`; pre-commit hook)
 
   # Python: global CLIs in isolated uv-managed venvs (ruff is already in brew).
   python_tools:

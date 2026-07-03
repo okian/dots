@@ -62,25 +62,29 @@ chezmoi execute-template < home/run_onchange_after_20-languages.sh.tmpl   # rend
 chezmoi cat ~/.config/git/config   # show what a target file would render to
 chezmoi update                     # git pull + apply
 dots update                  # apply + upgrade every toolchain (defined in nushell/dots.nu)
-dots upgrade                  # toolchains only, no git pull/apply (shared by the background updater)
-dots autoupdate {enable,disable,status,log}   # macOS LaunchAgent that runs `dots upgrade` every 4h
+dots upgrade                  # toolchains only, no git pull/apply (--formulae-only skips brew casks)
+dots packages                # edit packages.yaml; auto-applies if it changed
+dots readd [path]            # capture machine-local edits to managed files back into the repo
+dots autoupdate {enable,disable,status,log}   # macOS LaunchAgent, `dots upgrade --formulae-only` every 4h
 ```
 
 ## Background auto-update (macOS LaunchAgent)
 
 `home/Library/LaunchAgents/com.kian.dots-autoupdate.plist.tmpl` is a launchd
 agent (macOS-only via the `Library/` gate in `.chezmoiignore`) that runs
-`dots autoupdate run` → `dots upgrade` every 4h (`StartInterval` 14400s),
-logging to `~/.local/state/dots/autoupdate.log`. It upgrades **toolchains only**
-— it never does `chezmoi update`/git pull, so it can't apply remote config
-unattended. `run_onchange_after_47-autoupdate.sh.tmpl` (re)bootstraps the agent
+`dots autoupdate run` → `dots upgrade --formulae-only` every 4h (`StartInterval`
+14400s), logging to `~/.local/state/dots/autoupdate.log` (self-rotated past
+~512KB, truncate-in-place so launchd's fd survives). It upgrades **CLI
+toolchains only** — never brew casks (a background run must not swap a running
+app's bundle) and never `chezmoi update`/git pull, so it can't apply remote
+config unattended. `run_onchange_after_47-autoupdate.sh.tmpl` (re)bootstraps the agent
 whenever the rendered plist changes (it embeds the plist's `sha256`, like the
 Doom wiring) and creates the log dir. The agent calls nushell with an explicit
 `PATH` (launchd's env is minimal) and `source`s `dots.nu` to reach the subcommand.
 `dots autoupdate {enable,disable,status,log,now}` are the front-ends.
 
 The `dots` command (nushell) is also the user-facing wrapper over chezmoi for
-daily repo management — `dots {edit,diff,apply,add,show,pull,save,status,cd,log,managed,doctor}`
+daily repo management — `dots {edit,diff,apply,add,readd,forget,show,pull,save,status,cd,log,managed,doctor,packages}`
 mirror the chezmoi commands above so users never call `chezmoi` directly. When you add a
 chezmoi workflow, add the matching `dots` subcommand and a line to the bare-`dots` help.
 
@@ -89,6 +93,8 @@ mirror locally before pushing:
 1. `chezmoi init --promptDefaults` + `apply --dry-run --force --exclude=scripts,externals` — template lint.
 2. Render each `home/run_*.sh.tmpl` via `chezmoi execute-template` and pipe to
    `shellcheck --severity=error --shell=bash`. **All shell in `.sh.tmpl` files must pass shellcheck.**
+3. `shellcheck --severity=error --shell=bash` the plain-bash files applied verbatim:
+   `home/dot_config/git/hooks/executable_*`, `hooks/lib/*.sh`, `home/bins/executable_git-identities-sync`.
 
 ## Conventions when editing
 
@@ -121,6 +127,15 @@ shared helpers and config resolution (`git config hooks.<key>` overrides
 `~/.config/git/hooks.conf` defaults). Note: committing directly to a protected branch (`main`,
 …) is blocked by default — `git config hooks.allowProtected true` in solo repos. Bypass with
 `--no-verify` or `HOOKS_DISABLE=1`.
+
+**Shipped linter configs** live in `hooks/linters/` (a sibling of `lib/`). When a repo has no
+config of its own, the lint pass injects the shipped conservative default via the tool's
+`--config` flag; a repo-local config always wins (then the tool runs bare and self-discovers).
+`common.sh`'s `default_lint_config <shipped-basename> <repo-local-name>...` is the resolver —
+it echoes the shipped path only when no repo-local name exists and `hooks.useDefaultLinterConfig`
+(default true) is on. To add a language: drop a config in `hooks/linters/` and call the resolver
+at that linter's call site in `lib/languages.sh` (see `_lint_go`/`_lint_python`). Currently
+shipped: `golangci.yml` (v2 schema) and `ruff.toml`.
 
 ## Per-entity git identities
 

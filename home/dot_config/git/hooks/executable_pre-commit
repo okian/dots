@@ -50,6 +50,9 @@ else
   if cfg_bool lintOnCommit false; then
     for l in $(staged_langs); do lang_lint "$l" || fail=1; done
   fi
+  # Language-agnostic staged checks (self-filtering; skip if their tool is absent).
+  check_typos || fail=1
+  check_k8s_manifests || fail=1
 fi
 
 # --- Chain to any repo-local / husky pre-commit -----------------------------

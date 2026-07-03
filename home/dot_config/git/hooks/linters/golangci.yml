@@ -1,0 +1,35 @@
+# Conservative default golangci-lint config, shipped by the global git hooks.
+#
+# Used by the Go lint pass (pre-push, or pre-commit when hooks.lintOnCommit) ONLY
+# when a repo has NO golangci-lint config of its own. A repo-local
+# .golangci.{yml,yaml,toml,json} ALWAYS wins — the hook then runs golangci-lint
+# bare and lets it discover the repo's file. Turn shipped defaults off entirely
+# with:  git config hooks.useDefaultLinterConfig false
+#
+# Philosophy: keep golangci-lint's widely-accepted "standard" set (govet,
+# errcheck, staticcheck, ineffassign, unused) and add only high-signal,
+# low-false-positive linters on top. Formatting is intentionally NOT handled
+# here — the pre-commit format pass (gofumpt/goimports) owns that, so the two
+# never disagree.
+version: "2"
+
+run:
+  # A push gate should not hang; fail slow linting rather than block forever.
+  timeout: 5m
+  # Test files have bugs too.
+  tests: true
+
+linters:
+  # "standard" is the maintainers' default baseline. We extend it, never shrink.
+  default: standard
+  enable:
+    - bodyclose   # response/HTTP bodies that are never closed (resource leak)
+    - misspell    # common misspellings in comments and strings
+    - unconvert   # redundant type conversions
+  exclusions:
+    # Leave generated code alone, and keep the curated false-positive rules so
+    # the baseline stays quiet on idiomatic code.
+    generated: lax
+    presets:
+      - common-false-positives
+      - legacy

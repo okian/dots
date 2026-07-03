@@ -110,10 +110,37 @@ is_protected() { # is_protected <branch>
 staged_files_z() { git diff --cached --name-only --diff-filter=ACMR -z; }
 
 # ---------------------------------------------------------------------------
+# Shipped default linter configs. A repo-local config ALWAYS wins; the shipped
+# default is a fallback so a repo with no config still gets a sensible, uniform
+# baseline instead of each tool's bare built-in behavior. The config files live
+# next to the hooks (../linters, a sibling of this lib/ dir). Master switch:
+# `git config hooks.useDefaultLinterConfig false`.
+# ---------------------------------------------------------------------------
+_HOOKS_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." 2>/dev/null && pwd)"
+HOOKS_CONFIG_DIR="${HOOKS_CONFIG_DIR:-$_HOOKS_DIR/linters}"
+
+# Echo the shipped default config path for a tool — but ONLY when the repo has
+# none of its own. Echoes nothing (so the caller runs the tool bare and lets it
+# discover the repo's config) when a repo-local config exists, when shipped
+# defaults are disabled, or when the shipped file is missing.
+#   default_lint_config <shipped-basename> <repo-local-name>...
+default_lint_config() {
+  local shipped="$1"; shift
+  local root n; root=$(repo_root) || return 0
+  for n in "$@"; do
+    [ -e "$root/$n" ] && return 0     # repo config present → local wins
+  done
+  cfg_bool useDefaultLinterConfig true || return 0
+  local p="$HOOKS_CONFIG_DIR/$shipped"
+  [ -f "$p" ] && printf '%s' "$p"
+}
+
+# ---------------------------------------------------------------------------
 # Language detection.
 #   detect_langs  : whole-repo, by root marker files (for tests/lint/deps)
 #   staged_langs  : by staged file extensions (for fmt on touched files)
-# Both echo a newline list from {go,rust,swift,node,python,jvm}.
+# Both echo a newline list from
+# {go,rust,swift,node,python,jvm,shell,docker,terraform,k8s}.
 # ---------------------------------------------------------------------------
 detect_langs() {
   local root out=""
@@ -124,6 +151,10 @@ detect_langs() {
   [ -f "$root/package.json" ] && out="$out node"
   { [ -f "$root/pyproject.toml" ] || [ -f "$root/requirements.txt" ] || [ -f "$root/setup.py" ] || [ -f "$root/setup.cfg" ]; } && out="$out python"
   { [ -f "$root/build.gradle" ] || [ -f "$root/build.gradle.kts" ] || [ -f "$root/settings.gradle" ] || [ -f "$root/settings.gradle.kts" ] || [ -f "$root/pom.xml" ]; } && out="$out jvm"
+  # Terraform/OpenTofu: any *.tf anywhere (bounded; prune vendor/state/vcs dirs).
+  [ -n "$(find "$root" \( -name .git -o -name .terraform -o -name node_modules \) -prune -o -name '*.tf' -print 2>/dev/null | head -n1)" ] && out="$out terraform"
+  # Kubernetes/Helm: a Helm chart or a kustomization anywhere.
+  [ -n "$(find "$root" \( -name .git -o -name node_modules \) -prune -o \( -name Chart.yaml -o -name kustomization.yaml -o -name kustomization.yml \) -print 2>/dev/null | head -n1)" ] && out="$out k8s"
   printf '%s' "$out" | tr ' ' '\n' | sed '/^$/d' | sort -u
 }
 
@@ -137,6 +168,9 @@ staged_langs() {
       *.js | *.jsx | *.ts | *.tsx | *.mjs | *.cjs) out="$out node" ;;
       *.py) out="$out python" ;;
       *.kt | *.kts | *.java) out="$out jvm" ;;
+      *.sh | *.bash) out="$out shell" ;;
+      Dockerfile | */Dockerfile | *.Dockerfile | Dockerfile.* | */Dockerfile.* | Containerfile | */Containerfile) out="$out docker" ;;
+      *.tf | *.tfvars) out="$out terraform" ;;
     esac
   done < <(staged_files_z)
   printf '%s' "$out" | tr ' ' '\n' | sed '/^$/d' | sort -u
@@ -239,6 +273,52 @@ check_large_files() {
   if [ "$bad" = 1 ]; then
     hook_hint "track with Git LFS (git lfs track '<pattern>') or unstage it"
     hook_hint "override: git config hooks.checkLargeFiles false  (or raise hooks.maxFileSizeMB)"
+    return 1
+  fi
+  return 0
+}
+
+# ---------------------------------------------------------------------------
+# Spell check (typos) across all staged files. Language-agnostic; skips when
+# `typos` isn't installed. Honors typos.toml allowlists in the repo.
+# ---------------------------------------------------------------------------
+check_typos() {
+  cfg_bool typos true || return 0
+  have typos || return 0
+  # Guard against an empty stage: with no paths, typos would scan the whole tree.
+  [ -n "$(staged_files_z | tr '\0' '\n' | sed '/^$/d')" ] || return 0
+  hook_step "typos (spell check)"
+  if ! staged_files_z | xargs -0 typos -- >&2 2>&1; then
+    hook_err "typos found likely misspellings in staged files"
+    hook_hint "fix them, auto-fix: typos -w <files>, or allowlist in typos.toml"
+    hook_hint "disable: git config hooks.typos false"
+    return 1
+  fi
+  return 0
+}
+
+# ---------------------------------------------------------------------------
+# Kubernetes manifest validation (kubeconform) on staged YAML that looks like a
+# k8s manifest (has apiVersion + kind, and isn't a Helm template). Everything
+# else is left alone; skips entirely when kubeconform isn't installed.
+# ---------------------------------------------------------------------------
+check_k8s_manifests() {
+  cfg_bool k8sValidate true || return 0
+  have kubeconform || return 0
+  local f manifests=""
+  while IFS= read -r f; do
+    [ -f "$f" ] || continue
+    grep -Eq '^[[:space:]]*apiVersion:' "$f" || continue
+    grep -Eq '^[[:space:]]*kind:' "$f" || continue
+    grep -q '{{' "$f" && continue # skip Helm templates (not valid YAML)
+    manifests="$manifests $f"
+  done < <(staged_files_matching '*.yaml' '*.yml')
+  [ -z "$manifests" ] && return 0
+  hook_step "kubeconform (k8s manifests)"
+  # shellcheck disable=SC2086
+  if ! kubeconform -ignore-missing-schemas -summary $manifests >&2 2>&1; then
+    hook_err "kubeconform validation failed"
+    hook_hint "fix the manifest(s); disable: git config hooks.k8sValidate false"
     return 1
   fi
   return 0

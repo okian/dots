@@ -1,0 +1,68 @@
+#!/usr/bin/env bash
+# Global prepare-commit-msg: if the current branch name carries a ticket key
+# (e.g. the ROG-123 in feat/ROG-123-slug), inject it into the commit subject so
+# the commit-msg ticket requirement is satisfied automatically. Complements the
+# ticketRequired check in the commit-msg hook.
+# Bypass: git commit --no-verify | HOOKS_DISABLE=1 | git config hooks.ticketAutoInsert false
+_HOOK_TAG="prepare-commit-msg"
+HOOK_DIR="$(cd "$(dirname "$0")" && pwd)"
+# shellcheck source=lib/common.sh
+. "$HOOK_DIR/lib/common.sh"
+
+hooks_disabled && exit 0
+
+# Repo-local/.husky prepare-commit-msg first (commitizen etc.) — the global
+# hooksPath shadows them, and every exit below must not skip this delegation.
+run_local_hook prepare-commit-msg "$@" || exit $?
+
+cfg_bool ticketAutoInsert true || exit 0
+
+msg_file="$1"; src="${2:-}"
+[ -n "$msg_file" ] && [ -f "$msg_file" ] || exit 0
+
+# Only touch messages the user is authoring fresh. Skip merges, squashes, and
+# reused/amended messages (-c/-C/--amend), which already carry deliberate text.
+case "$src" in
+  merge | squash | commit) exit 0 ;;
+esac
+
+# Ticket key from the current branch (first match of the configured pattern).
+pat=$(cfg ticketPattern "$HOOKS_TICKET_PATTERN")
+branch=$(current_branch)
+ticket=$(printf '%s' "$branch" | grep -oE "$pat" | head -n1)
+[ -n "$ticket" ] || exit 0
+
+# Already referenced (in the real message, ignoring comments)? Leave it alone.
+# Scissors range first (else the comment-delete eats the marker and a verbose
+# commit's diff would stay in $body); `-*` not `-\+` — BSD sed has no BRE \+.
+body=$(sed -e '/^# -* >8 -*$/,$d' -e '/^[[:space:]]*#/d' "$msg_file")
+if printf '%s' "$body" | grep -qF "$ticket"; then exit 0; fi
+
+# Never decorate special commits — prefixing e.g. "fixup! x" would break
+# `git rebase --autosquash` (git matches on the exact "fixup! "/"squash! " prefix).
+subject=$(printf '%s\n' "$body" | sed '/^[[:space:]]*$/d' | head -n1)
+case "$subject" in
+  "Merge "* | "Revert "* | "Reapply "* | "fixup! "* | "squash! "* | "amend! "*) exit 0 ;;
+esac
+
+# Insert at the first non-comment line (the subject slot): seed a blank subject,
+# or prefix/suffix an existing one per hooks.ticketInsertStyle (default prefix).
+style=$(cfg ticketInsertStyle prefix)
+tmp="$msg_file.hooktmp.$$"
+awk -v ticket="$ticket" -v style="$style" '
+  BEGIN { done = 0 }
+  {
+    if (!done && $0 !~ /^[[:space:]]*#/) {
+      if ($0 ~ /^[[:space:]]*$/)      { print ticket ": " }
+      else if (style == "suffix")     { print $0 " (" ticket ")" }
+      else                            { print ticket ": " $0 }
+      done = 1
+      next
+    }
+    print
+  }
+  END { if (!done) print ticket ": " }
+' "$msg_file" > "$tmp" && mv "$tmp" "$msg_file"
+
+hook_info "inserted ticket $ticket from branch '$branch'"
+exit 0

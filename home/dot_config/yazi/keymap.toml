@@ -1,0 +1,18 @@
+# yazi keymap — overrides layered on the shipped defaults (prepend wins, every
+# other default binding stays). Managed by chezmoi.
+#
+# Why: the defaults bind z -> `plugin fzf` and Z -> `plugin zoxide`, and BOTH
+# shell out to fzf (the zoxide plugin runs `zoxide query -i`, which requires
+# fzf too). This setup deliberately replaces fzf with television (`tv`), so the
+# same keys are rebound to tv-backed equivalents. `ya emit` sends the pick back
+# to this yazi instance.
+
+[[mgr.prepend_keymap]]
+on = "z"
+run = '''shell --block 'p="$(fd --hidden --follow --exclude .git | tv)" && [ -n "$p" ] && { [ -d "$p" ] && ya emit cd "$p" || ya emit reveal "$p"; }' '''
+desc = "Jump to a file/directory (fd → tv)"
+
+[[mgr.prepend_keymap]]
+on = "Z"
+run = '''shell --block 'd="$(zoxide query --list --exclude "$PWD" | tv --preview-command "eza --tree --level=2 --color=always {}")" && [ -n "$d" ] && ya emit cd "$d"' '''
+desc = "Jump to a frecent directory (zoxide → tv)"

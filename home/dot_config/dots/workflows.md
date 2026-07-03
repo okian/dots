@@ -10,6 +10,9 @@ patterns, not rules — steal what fits.
   the path. `zi` gives an interactive picker when several match.
 - **Fuzzy-jump when you don't remember the name:** `fcd` opens a television
   picker of subdirectories with a tree preview.
+- **Browse when you'd rather look:** `y` opens yazi (file manager with previews);
+  quitting cd's your shell to where you were. Inside it, `z` fuzzy-jumps to any
+  file/dir and `Z` to a frecent dir — both through television.
 - **Split inside WezTerm** instead of opening new windows: `Ctrl-Space \` / `-`
   to split. `Ctrl-h/j/k/l` moves seamlessly between WezTerm panes *and* Neovim
   splits — the same four keys whether the neighbour is a shell or an editor.
@@ -41,27 +44,31 @@ A two-step rhythm beats scrolling: **filter to candidates, then act.**
 
 ## Editing
 
-- **Neovim is the editor everywhere** — `$EDITOR`, `$GIT_EDITOR`, `$KUBE_EDITOR`,
-  and `fc` all open it. Learn it once, use it for commit messages, `kubectl edit`,
-  rebases, everything.
+- **Neovim is the editor everywhere** — `$EDITOR`, `$GIT_EDITOR`, and
+  `$KUBE_EDITOR` all point at it. Learn it once, use it for commit messages,
+  `kubectl edit`, rebases, everything.
 - **Inside Neovim (LazyVim):** `<leader>ff` to open files, `<leader>/` to grep,
   `gd`/`gr` to navigate code, `K` for docs, `<leader>ca` for fixes, `<leader>cr` to
   rename across the project, `<leader>cf` to format. `:checkhealth` if something's off.
-- **Don't reformat blindly on commit.** The pre-commit hook *checks* formatting
-  (it won't rewrite your partial staging). If it complains, run the fixer it names
-  (`gofmt -w`, `cargo fmt`, `<pm> run format`) and re-stage.
+- **Don't reformat blindly on commit.** The pre-commit hook *checks* formatting and
+  lints staged files (Go/Rust/Node/Python, plus shell `shellcheck`, `hadolint` for
+  Dockerfiles, `tofu fmt`/`tflint`, `kubeconform`, and a `typos` spell-check) — it
+  never rewrites your partial staging. If it complains, run the fixer it names
+  (`gofumpt -w`, `cargo fmt`, `<pm> run format`, `typos -w`) and re-stage.
 
 ## Git
 
 - **Branch, don't commit to `main`.** `git switch -c feat/ROG-1234-thing`. Direct
   commits to protected branches are blocked by the hook.
-- **Write traceable messages:** include the ticket key — `ROG-1234: fix token
-  refresh`. The commit-msg hook enforces it; the body is free-form.
+- **Ticket keys are auto-inserted from your branch.** Branch as
+  `feat/ROG-1234-thing` and `ROG-1234: ` is prepended to your subject for you. The
+  commit-msg hook still enforces one if the branch has none; the body is free-form.
 - **Use lazygit (`lg`) for the messy parts** — stage individual hunks, amend,
   reorder, resolve conflicts visually. `git lg` (alias) shows a graph log.
 - **Diffs are rendered by delta** automatically — side-by-side, syntax-highlighted.
-- **Pushing runs lint + fast tests** for the repo's languages. If you genuinely need
-  to skip: `HOOKS_SKIP_TESTS=1 git push`, or `git push --no-verify` for everything.
+- **Pushing runs lint + fast tests** for the repo's languages, and **blocks
+  WIP/fixup! commits** (finish or `git rebase -i --autosquash` first). Skip tests
+  with `HOOKS_SKIP_TESTS=1 git push`, or everything with `git push --no-verify`.
 - **Force-pushing to a protected branch is blocked** — a safety net before CI.
 
 ## Secrets
@@ -77,15 +84,19 @@ A two-step rhythm beats scrolling: **filter to candidates, then act.**
 - **One command:** `dots update` — pulls config changes and upgrades brew,
   rust, swift, uv/python, Neovim plugins, and Doom. `dots upgrade` does the
   toolchain half only (no git pull / config apply).
-- **Hands-off (macOS):** a LaunchAgent runs `dots upgrade` every 4 hours in the
-  background. `dots autoupdate status` shows it; `dots autoupdate log` tails the
-  run log; `dots autoupdate disable`/`enable` turns it off/on. It only upgrades
-  toolchains — it never pulls or applies config unattended.
-- **Change configs the chezmoi way:** `chezmoi edit ~/.config/nvim/init.lua` →
-  `chezmoi apply`. To preview, `chezmoi diff`. Never hand-edit a managed file in
-  place — your next `apply` would revert it.
-- **Capture a machine-local tweak** back into the repo with `chezmoi re-add`, then
-  commit & push so every machine gets it.
+- **Hands-off (macOS):** a LaunchAgent runs `dots upgrade --formulae-only` every
+  4 hours in the background — CLI toolchains only; GUI casks wait for an
+  interactive `dots update` so a running app is never swapped underneath you.
+  `dots autoupdate status` shows the timer, last run and log; `dots autoupdate
+  log` tails it; `disable`/`enable` turns it off/on. It never pulls or applies
+  config unattended.
+- **Change configs the dots way:** `dots edit ~/.config/nvim/init.lua` edits the
+  source and applies it. To preview, `dots diff`. Never hand-edit a managed file
+  in place — your next `apply` would revert it.
+- **Capture a machine-local tweak** back into the repo with `dots readd`, then
+  `dots save` so every machine gets it.
+- **Add or drop a tool** with `dots packages` — packages.yaml is the single
+  source of truth, and the installers re-run automatically when it changes.
 
 ## A few muscle-memory combos
 
@@ -93,5 +104,5 @@ A two-step rhythm beats scrolling: **filter to candidates, then act.**
 z api && ff                  # jump to a project, fuzzy-open a file in nvim
 rg -l "TODO" | tv | xargs nvim   # pick among files containing TODO, edit it
 git switch -c fix/ROG-22-null && lg   # branch, then stage+commit in lazygit
-chezmoi edit ~/.zshrc && chezmoi apply  # tweak a dotfile and apply it
+dots edit ~/.zshrc               # tweak a dotfile (edits source + applies)
 ```

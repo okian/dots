@@ -42,3 +42,12 @@ jobs:
               | shellcheck --severity=error --shell=bash - || fail=1
           done
           exit "$fail"
+
+      # The git hooks and ~/bins scripts are plain bash applied verbatim (no
+      # template render), so lint the files directly.
+      - name: Shellcheck git hooks + bins
+        run: |
+          shellcheck --severity=error --shell=bash \
+            home/dot_config/git/hooks/executable_* \
+            home/dot_config/git/hooks/lib/*.sh \
+            home/bins/executable_git-identities-sync

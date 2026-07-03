@@ -1,0 +1,13 @@
+# Conservative default ruff config, shipped by the global git hooks.
+#
+# Used by the Python lint pass ONLY when a repo has NO ruff config of its own
+# (ruff.toml, .ruff.toml, or a [tool.ruff] table in pyproject.toml) — a local
+# config ALWAYS wins. Turn shipped defaults off with:
+#   git config hooks.useDefaultLinterConfig false
+#
+# Philosophy: ruff's own defaults (E-pycodestyle-errors, F-pyflakes) plus
+# pycodestyle warnings and import sorting — all high-signal, low-false-positive.
+# No stylistic/opinionated rule families, so it won't fight a project's style.
+
+[lint]
+select = ["E", "F", "W", "I"]

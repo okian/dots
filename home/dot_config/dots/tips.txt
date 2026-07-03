@@ -3,7 +3,7 @@
 # Edit freely; `dots tips` lists them all.
 
 # --- moving around ---
-`z <part-of-path>` jumps to a frecent directory (zoxide). `zi` picks interactively.
+`z <part-of-path>` jumps to a frecent directory (zoxide). `zi` picks interactively (television).
 `fcd` fuzzy-finds a directory and cd's into it. `cd -` toggles back.
 `lt` shows a 2-level tree (eza); `ll` is a detailed list with icons.
 WezTerm is the multiplexer: `Ctrl-Space \` splits horizontal, `Ctrl-Space -` vertical.
@@ -22,7 +22,7 @@ Press Ctrl-T to fuzzy-complete the current command (television) — files, branc
 In Neovim: `<space>ff` finds files, `<space>/` greps the project, `<space>fv`/`<space>sv` open the television picker.
 
 # --- editing ---
-Neovim is $EDITOR everywhere — git, kubectl, and `fc` all open in nvim.
+Neovim is $EDITOR everywhere — git, kubectl, and anything else that opens an editor uses nvim.
 `v <file>` or `ff` opens Neovim; `<space>e` toggles the file tree.
 `lg` opens lazygit — stage hunks, write commits, manage branches visually.
 Commit subjects need a ticket key (e.g. ROG-1234) — the commit-msg hook enforces it.
@@ -31,6 +31,7 @@ Commit subjects need a ticket key (e.g. ROG-1234) — the commit-msg hook enforc
 Add language support in Neovim with `:LazyExtras` — toggle a row, restart.
 Press Space in Neovim and wait — which-key pops a menu of every binding. No need to memorize.
 `y` opens yazi: a file manager with image/video previews; quit and your shell cd's there.
+Inside yazi, `z` fuzzy-jumps to any file/dir and `Z` to a frecent dir — both via television.
 
 # --- git & hooks ---
 Direct commits to main/master are blocked — branch with `git switch -c feat/ROG-1-x`.
@@ -38,18 +39,20 @@ Bypass a hook once with `git commit --no-verify`; turn all off with `dots hooks 
 `git lg` shows a graph log; delta renders side-by-side colored diffs automatically.
 In a delta diff, `n`/`N` jumps between files/hunks (navigate is on).
 Pushing runs lint + fast tests for the repo's languages; skip with `HOOKS_SKIP_TESTS=1`.
+Branch as `feat/ROG-1-x` and the ROG-1 ticket is auto-inserted into your commit subject.
+Pushing WIP/fixup! commits is blocked — squash first (`git rebase -i --autosquash`) or `--no-verify`.
 Commits auto-rebase on pull and push auto-sets upstream — no `-u` needed.
 
 # --- maintenance & tooling ---
 `dots update` upgrades configs + every toolchain (brew, rust, swift, uv, nvim, doom).
-On macOS, `dots autoupdate` runs `dots upgrade` every 4h in the background — `status`/`log` to peek.
-`chezmoi edit ~/.zshrc` then `chezmoi apply` — never edit managed dotfiles in place.
-`chezmoi re-add` pulls a machine-local change back into the repo; then push it.
+On macOS, `dots autoupdate` upgrades CLI toolchains every 4h in the background (casks wait for `dots update`) — `status`/`log` to peek.
+`dots edit <file>` edits the managed source and applies it — never edit managed dotfiles in place.
+`dots readd` pulls machine-local changes back into the repo; `dots save` pushes them.
 Add a secret with `dots secret-add <path>` — it's encrypted before it touches git.
 `man <cmd>` is rendered with syntax highlighting via bat. `cat` is bat; `ls` is eza.
 `colima start` boots the container runtime; then `docker run ...` works without Docker Desktop.
 Per-language tools (goimports, gopls, dlv, clippy, pytest, mypy, …) ship preinstalled.
-Add a dev tool: edit `go_tools`/`cargo_tools`/`python_tools`/`node_globals` in packages.yaml → `chezmoi apply`.
+Add any tool with `dots packages` — it opens packages.yaml and re-runs the installers on save.
 `tldr <cmd>` shows example-first usage (tealdeer) — faster than scrolling a full man page.
 `just` runs project tasks from a justfile: bare `just` lists recipes, `just <name>` runs one.
 `git dft` shows a structural, syntax-aware diff (difftastic); `git absorb` auto-fixups staged hunks.

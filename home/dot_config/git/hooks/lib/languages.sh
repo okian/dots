@@ -6,31 +6,41 @@
 _skip() { hook_info "$1 (skipped: $2)"; return 0; }
 
 # ===========================================================================
-# FORMAT CHECK (pre-commit) — scoped to staged files where practical.
+# STAGED FAST PASS (pre-commit) — format + fast per-file lint, scoped to staged
+# files where practical. Heavier whole-repo linters live in the LINT pass below.
 # ===========================================================================
 lang_format_check() { # lang_format_check <lang>
   case "$1" in
-    go)     _fmt_go ;;
-    rust)   _fmt_rust ;;
-    swift)  _fmt_swift ;;
-    node)   _fmt_node ;;
-    python) _fmt_python ;;
-    jvm)    _fmt_jvm ;;
+    go)        _fmt_go ;;
+    rust)      _fmt_rust ;;
+    swift)     _fmt_swift ;;
+    node)      _fmt_node ;;
+    python)    _fmt_python ;;
+    jvm)       _fmt_jvm ;;
+    shell)     _fmt_shell ;;
+    docker)    _fmt_docker ;;
+    terraform) _fmt_terraform ;;
     *) return 0 ;;
   esac
 }
 
 _fmt_go() {
-  have gofmt || return 0
-  local files bad
+  local files bad tool
   files=$(staged_files_matching '*.go')
   [ -z "$files" ] && return 0
-  hook_step "go: gofmt"
+  # Prefer the strictest formatter installed: gofumpt ⊃ gofmt; goimports also
+  # fixes import grouping. All three support -l (list files needing formatting).
+  if   have gofumpt;   then tool=gofumpt
+  elif have goimports; then tool=goimports
+  elif have gofmt;     then tool=gofmt
+  else return 0
+  fi
+  hook_step "go: $tool -l"
   # shellcheck disable=SC2086
-  bad=$(gofmt -l $files 2>/dev/null)
+  bad=$($tool -l $files 2>/dev/null)
   if [ -n "$bad" ]; then
     hook_err "go files need formatting:"; printf '%s\n' "$bad" | sed 's/^/    /' >&2
-    hook_hint "fix: gofmt -w <files>  (or: go fmt ./...)"
+    hook_hint "fix: $tool -w <files>  (or: go fmt ./...)"
     return 1
   fi
 }
@@ -113,16 +123,75 @@ _fmt_jvm() {
   fi
 }
 
+_fmt_shell() {
+  local files; files=$(staged_files_matching '*.sh' '*.bash'); [ -z "$files" ] && return 0
+  local rc=0
+  if have shellcheck; then
+    local sev; sev=$(cfg shellcheckSeverity warning)
+    hook_step "shell: shellcheck --severity=$sev"
+    # shellcheck disable=SC2086
+    run_at_root shellcheck --severity="$sev" -- $files || { hook_err "shellcheck found issues"; rc=1; }
+  fi
+  # shfmt is opinionated about style, so it's opt-in (git config hooks.shfmt true).
+  if have shfmt && cfg_bool shfmt false; then
+    hook_step "shell: shfmt -d"
+    # shellcheck disable=SC2086
+    if ! shfmt -d $files >&2 2>&1; then
+      hook_err "shell files need formatting"; hook_hint "fix: shfmt -w <files>"; rc=1
+    fi
+  fi
+  return $rc
+}
+
+_fmt_docker() {
+  have hadolint || return 0
+  local files
+  files=$(staged_files_matching 'Dockerfile' '*/Dockerfile' '*.Dockerfile' 'Dockerfile.*' '*/Dockerfile.*' 'Containerfile' '*/Containerfile')
+  [ -z "$files" ] && return 0
+  hook_step "docker: hadolint"
+  # shellcheck disable=SC2086
+  if ! run_at_root hadolint $files; then
+    hook_err "hadolint found Dockerfile issues"
+    hook_hint "fix them, or inline-ignore a rule: # hadolint ignore=DLxxxx"
+    return 1
+  fi
+}
+
+_fmt_terraform() {
+  local files; files=$(staged_files_matching '*.tf' '*.tfvars'); [ -z "$files" ] && return 0
+  local tool
+  if   have tofu;      then tool=tofu
+  elif have terraform; then tool=terraform
+  else return 0
+  fi
+  hook_step "terraform: $tool fmt -check"
+  # `fmt` targets a directory; check each dir that has staged HCL (dedup inline).
+  local f d seen="" rc=0
+  while IFS= read -r f; do
+    d=$(dirname "$f")
+    case " $seen " in *" $d "*) continue ;; esac
+    seen="$seen $d"
+    run_at_root "$tool" fmt -check -diff "$d" || rc=1
+  done < <(printf '%s\n' "$files")
+  if [ "$rc" -ne 0 ]; then
+    hook_err "terraform files need formatting"; hook_hint "fix: $tool fmt"
+    return 1
+  fi
+  return 0
+}
+
 # ===========================================================================
 # LINT (pre-push) — whole project, the heavier pass.
 # ===========================================================================
 lang_lint() { # lang_lint <lang>
   case "$1" in
-    go)     _lint_go ;;
-    rust)   _lint_rust ;;
-    swift)  _lint_swift ;;
-    node)   _lint_node ;;
-    python) _lint_python ;;
+    go)        _lint_go ;;
+    rust)      _lint_rust ;;
+    swift)     _lint_swift ;;
+    node)      _lint_node ;;
+    python)    _lint_python ;;
+    terraform) _lint_terraform ;;
+    k8s)       _lint_k8s ;;
     jvm)    return 0 ;;  # gradle/detekt too slow for a push gate; reminder only
     *) return 0 ;;
   esac
@@ -131,12 +200,31 @@ lang_lint() { # lang_lint <lang>
 _lint_go() {
   have go || return 0
   local rc=0
+  # Prefer golangci-lint (bundles staticcheck & more); else standalone
+  # staticcheck; else the built-in go vet.
   if have golangci-lint; then
-    hook_step "go: golangci-lint run"
-    run_at_root golangci-lint run || rc=1
+    # Fall back to the shipped conservative config when the repo has none;
+    # a repo-local .golangci.* always wins (then $def is empty → run bare).
+    local def cfg_arg=""
+    def=$(default_lint_config golangci.yml .golangci.yml .golangci.yaml .golangci.toml .golangci.json)
+    [ -n "$def" ] && cfg_arg="--config $def"
+    hook_step "go: golangci-lint run${cfg_arg:+ (dots default config)}"
+    # shellcheck disable=SC2086
+    run_at_root golangci-lint run $cfg_arg || rc=1
+  elif have staticcheck; then
+    hook_step "go: staticcheck ./..."
+    run_at_root staticcheck ./... || rc=1
   else
     hook_step "go: go vet ./..."
     run_at_root go vet ./... || rc=1
+  fi
+  # go.mod/go.sum tidiness — non-mutating check (needs Go 1.23+ for `-diff`).
+  if cfg_bool goModTidy true && [ -f "$(repo_root)/go.mod" ] \
+     && go help mod tidy 2>/dev/null | grep -q -- '-diff'; then
+    hook_step "go: go mod tidy -diff"
+    if ! run_at_root go mod tidy -diff; then
+      hook_err "go.mod/go.sum not tidy"; hook_hint "fix: go mod tidy"; rc=1
+    fi
   fi
   if [ "$rc" -ne 0 ]; then hook_err "go lint failed"; return 1; fi
   return 0
@@ -168,10 +256,58 @@ _lint_node() {
 
 _lint_python() {
   have ruff || return 0
-  hook_step "python: ruff check"
-  if ! run_at_root ruff check .; then
+  # Shipped default unless the repo brings its own ruff config. ruff.toml /
+  # .ruff.toml is handled by the helper; a [tool.ruff] table in pyproject.toml
+  # counts as local too, so void the default in that case.
+  local def cfg_arg="" root
+  def=$(default_lint_config ruff.toml ruff.toml .ruff.toml)
+  root=$(repo_root)
+  if [ -n "$def" ] && [ -f "$root/pyproject.toml" ] && grep -q '^\[tool\.ruff' "$root/pyproject.toml"; then
+    def=""
+  fi
+  [ -n "$def" ] && cfg_arg="--config $def"
+  hook_step "python: ruff check${cfg_arg:+ (dots default config)}"
+  # shellcheck disable=SC2086
+  if ! run_at_root ruff check $cfg_arg .; then
     hook_err "ruff check failed"; return 1
   fi
+}
+
+_lint_terraform() {
+  local rc=0
+  if have tflint; then
+    hook_step "terraform: tflint --recursive"
+    run_at_root tflint --recursive || { hook_err "tflint failed"; rc=1; }
+  fi
+  if cfg_bool tfSecurity true && have trivy; then
+    hook_step "terraform: trivy config"
+    run_at_root trivy config --exit-code 1 --quiet . || { hook_err "trivy found misconfigurations"; rc=1; }
+  fi
+  # terraform-docs README freshness — opt-in (mutating-adjacent), needs a README.
+  if cfg_bool tfDocs false && have terraform-docs; then
+    hook_step "terraform: terraform-docs (check)"
+    run_at_root terraform-docs md . --output-file README.md --output-check \
+      || { hook_err "terraform-docs README is stale"; hook_hint "fix: terraform-docs md . --output-file README.md --output-mode inject"; rc=1; }
+  fi
+  return $rc
+}
+
+_lint_k8s() {
+  local rc=0 root chart; root=$(repo_root)
+  # helm lint per chart dir (a dir with a Chart.yaml).
+  if have helm; then
+    while IFS= read -r chart; do
+      [ -n "$chart" ] || continue
+      hook_step "k8s: helm lint $(dirname "$chart")"
+      run_at_root helm lint "$(dirname "$chart")" || { hook_err "helm lint failed"; rc=1; }
+    done < <(find "$root" \( -name .git -o -name node_modules \) -prune -o -name Chart.yaml -print 2>/dev/null)
+  fi
+  # Policy-as-code — opt-in; needs a repo-root policy/ dir of rego.
+  if cfg_bool k8sPolicy false && have conftest && [ -d "$root/policy" ]; then
+    hook_step "k8s: conftest test ."
+    run_at_root conftest test . || { hook_err "conftest policy check failed"; rc=1; }
+  fi
+  return $rc
 }
 
 # ===========================================================================
