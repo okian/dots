@@ -16,6 +16,14 @@ if ! command -v tailscale >/dev/null 2>&1; then
   echo "==> Installing Tailscale"
   curl -fsSL https://tailscale.com/install.sh | sh || true
 fi
+
+# --- tflint -----------------------------------------------------------------
+# Left homebrew-core; on macOS it's a cask (see packages.yaml). No Linux brew
+# formula, so use the vendor installer (installs to /usr/local/bin, self-sudos).
+if ! command -v tflint >/dev/null 2>&1; then
+  echo "==> Installing tflint"
+  curl -fsSL https://raw.githubusercontent.com/terraform-linters/tflint/master/install_linux.sh | bash || true
+fi
 echo "==> linux-apps done"
 {{ else -}}
 : # nothing to do on this OS

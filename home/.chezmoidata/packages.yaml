@@ -24,6 +24,7 @@ packages:
   # Extra Homebrew taps (macOS only — see Brewfile in run_onchange_before_10).
   brew_taps:
     - d12frosted/emacs-plus   # emacs-plus@30 (native-comp + HarfBuzz Emacs)
+    - terraform-linters/tap   # tflint cask (left homebrew-core; see brew_casks)
 
   brew_formulae:
     # chezmoi itself (so it self-updates & stays on PATH)
@@ -115,7 +116,8 @@ packages:
     - conftest        # OPA/rego policy checks (opt-in: hooks.k8sPolicy)
     # terraform / IaC (git-hook linters: `tofu fmt`, tflint, `trivy config`)
     - opentofu        # `tofu` — Terraform-compatible IaC CLI
-    - tflint          # Terraform linter (pre-push)
+    # (tflint left homebrew-core; it's a macOS cask + Linux vendor script now —
+    #  see brew_casks / run_onchange_after_60-linux-apps.)
     - terraform-docs  # README freshness check (opt-in: hooks.tfDocs)
     # container / security
     - trivy         # CVE + secret scanner (images, repos, IaC)
@@ -131,7 +133,7 @@ packages:
   # macOS-only GUI apps (Homebrew casks). For each, see linux_flatpak for the
   # Linux equivalent. Exceptions handled elsewhere:
   #   - claude, iina : macOS-only (no Linux build).
-  #   - ollama, tailscale : on Linux installed via vendor script
+  #   - ollama, tailscale, tflint : on Linux installed via vendor script
   #     (see run_onchange_after_60-linux-apps).
   brew_casks:
     - wezterm
@@ -154,6 +156,9 @@ packages:
     - tailscale-app   # renamed from `tailscale` (the cask) in Homebrew
     - discord
     - iina
+    # CLI-only cask: tflint left homebrew-core and now ships as a cask from its
+    # own tap (trusted via brew_taps). Linux install: run_onchange_after_60-linux-apps.
+    - terraform-linters/tap/tflint  # Terraform linter (git pre-push hook)
 
   # macOS-only Homebrew *formulae* (not casks). emacs-plus builds Emacs.app with
   # native-compilation + HarfBuzz (HarfBuzz is what Doom's ligatures need); the
