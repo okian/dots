@@ -76,8 +76,8 @@ shell, `:colorscheme <name>` for a running nvim). The choice lives in
 | `ports` | listening TCP ports + the owning process |
 | `killp` | fuzzy-pick a running process and kill it |
 | `gcap "msg"` | git add -A → commit → push, in one shot |
-| `mail <to> [body…]` | send via Apple Mail — body from pipe or args; `-s` subject, `--cc/--bcc/--from`, `--draft` to review first |
-| `fmail <to> [context…]` | Apple's on-device AI (`fm`) writes subject + body from the piped/arg context → opens a Mail draft; `--send` ships it directly |
+| `mail <to> [body…]` | send via Apple Mail; `<to>` is an email or a Contacts name; body from pipe or args; `-s` subject, `--cc/--bcc/--from`, `--draft` to review first |
+| `fmail <to> [intent…]` | a model writes subject + body: words = intent, piped data = material it summarizes. Routes by size: short → on-device `fm`; long → Apple cloud (PCC), else Claude. `<to>` may be a Contacts name. Opens a Mail draft; `--send` ships it |
 | `y` | open yazi; cd's to wherever you quit it — inside, `z`/`Z` fuzzy-jump via tv |
 | `z <dir>` | jump to a frecent directory (zoxide); `zi` = interactive picker (tv) |
 | `dots update` | upgrade configs + all toolchains to latest |

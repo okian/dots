@@ -60,4 +60,4 @@ Add any tool with `dots packages` — it opens packages.yaml and re-runs the ins
 `btop` is a live system monitor; `dust` = disk usage, `duf` = free space, `procs` = process search.
 `sd 'old' 'new' file` is a saner find-and-replace than sed; `hyperfine 'cmd'` benchmarks it.
 `ls | mail you@x.com -s "subject"` emails the pipe via Apple Mail (`--cc`, `--bcc`, `--from`, `--draft` to review first).
-`fmail you@x.com "say thanks for the review"` — Apple's on-device AI writes the email and opens it as a Mail draft; `--send` ships it directly.
+`git log -15 | fmail "Kian" "my recent commits"` — a model writes a grounded summary (words = intent, pipe = material) and opens a Mail draft. Recipients can be Contacts names; short input stays on-device, long input goes to the cloud. `--send` ships it directly.

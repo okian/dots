@@ -122,28 +122,73 @@ def gcap [message: string] {
 
 # --- Email from the terminal (Apple Mail; macOS only) ------------------------
 # `mail`  — you write it:   ls | mail kian@example.com -s "the listing"
-#                           mail kian@example.com "on my way" -s "eta"
+#                           mail "Kian Ostad" "on my way" -s "eta"
 # `fmail` — the on-device model (`fm`, macOS 27) writes subject + body from
 #           whatever context you pipe/pass; opens a DRAFT for review by default.
+# Recipients (to/cc/bcc) may be an email OR a Contacts name — a bare name (no @)
+# is resolved via macOS Contacts (first use prompts once for Contacts access).
 
-# Normalize a comma-separated address list: trim spaces and <angle brackets>.
+# Resolve a person's name to an email via macOS Contacts. Returns the email of
+# the single best match; errors (never guesses) if there's no match or it's
+# ambiguous. First use prompts once for Contacts access (System Settings →
+# Privacy & Security → Contacts).
+def _contact_email [name: string] {
+  let script = '
+on run argv
+  set q to item 1 of argv
+  set out to ""
+  tell application "Contacts"
+    repeat with p in (people whose name contains q)
+      if (count of emails of p) > 0 then
+        set out to out & (name of p) & tab & (value of first email of p) & linefeed
+      end if
+    end repeat
+  end tell
+  return out
+end run
+'
+  let rows = (^osascript -e $script $name
+    | lines | where {|l| ($l | str trim) != "" }
+    | each {|l| let p = ($l | split row (char tab)); { name: ($p | first), email: ($p | last) } })
+  if ($rows | is-empty) {
+    error make --unspanned { msg: $"no Contacts entry with an email matches \"($name)\"" }
+  }
+  # Prefer a single exact (case-insensitive) name match before giving up on
+  # ambiguity — lets "Kian" win even if it's also a substring of other names.
+  let exact = ($rows | where {|r| ($r.name | str lowercase) == ($name | str lowercase) })
+  if ($exact | length) == 1 { return ($exact | first | get email) }
+  if ($rows | length) > 1 {
+    error make --unspanned { msg: $"\"($name)\" is ambiguous in Contacts \(($rows | get name | str join ', ')\) — use a fuller name or the email address." }
+  }
+  $rows | first | get email
+}
+
+# Normalize a comma-separated recipient list: trim spaces and <angle brackets>,
+# and resolve any bare name (no @) against Contacts.
 def _mail_addrs [s: string] {
   $s | split row ','
     | each {|a| $a | str trim | str trim --char '<' | str trim --char '>' | str trim }
     | where {|a| $a | is-not-empty }
+    | each {|a| if ($a | str contains '@') { $a } else { _contact_email $a } }
     | str join ','
 }
 
-# Body/context resolution: piped input wins (tables render like the terminal
-# shows them); otherwise the trailing word arguments.
-def _mail_text [piped: any, words: list<string>] {
+# Render piped input to text: strings pass through; structured data renders the
+# way the terminal shows it. Empty pipe -> "".
+def _mail_render [piped: any] {
   if ($piped | is-empty) {
-    $words | str join ' '
+    ""
   } else if (($piped | describe) == 'string') {
     $piped
   } else {
     $piped | table --expand | ansi strip
   }
+}
+
+# `mail` body resolution: piped input wins; otherwise the trailing word args.
+def _mail_text [piped: any, words: list<string>] {
+  let rendered = (_mail_render $piped)
+  if ($rendered | str trim | is-empty) { $words | str join ' ' } else { $rendered }
 }
 
 # Compose in Mail.app via AppleScript. action: "send" | "draft". Values travel
@@ -210,28 +255,59 @@ def mail [
   if $draft { print "==> draft opened in Mail." } else { print $"==> sent to ($to)." }
 }
 
-# Like `mail`, but Apple's on-device model writes the subject and body FROM the
-# piped/argument context. Drafts by default — review AI text before it leaves
-# the machine; pass --send to trust it and ship immediately.
-#   git log -5 | fmail team@example.com
-#   fmail a@b.com "ask about the delayed shipment, friendly tone" --send
+# Like `mail`, but a model writes the subject and body. The word args say what
+# the mail is FOR (the intent/framing); anything piped in is the MATERIAL to
+# base it on — both are used together. Model routing: short input stays on the
+# on-device model (fast, offline, private); longer input (more than a few lines)
+# goes to the cloud — Apple's Private Cloud Compute, and if that's unavailable,
+# the Claude CLI. Opens a draft by default so you review before it leaves;
+# --send ships immediately.
+#   git log -15 | fmail c@okian.eu "here are my last dotfiles commits"
+#   fmail "Kian Ostad" "ask about the delayed shipment, friendly tone" --send
 def fmail [
-  to: string                 # recipient(s), comma-separated
-  ...context: string         # what the mail should say (ignored when piped)
+  to: string                 # recipient(s): email or Contacts name, comma-separated
+  ...context: string         # what the mail is for (used together with any pipe)
   --cc: string = ""
   --bcc: string = ""
   --from: string = ""        # sending address (must match a Mail account)
   --send                     # send immediately instead of opening the draft
 ] {
-  let ctx = (_mail_text $in $context)
-  if ($ctx | str trim | is-empty) {
-    print "usage: <pipe> | fmail <to>   or   fmail <to> <what to say...>"
+  let words = ($context | str join ' ' | str trim)
+  let raw_material = (_mail_render $in)
+  if ($words | is-empty) and ($raw_material | str trim | is-empty) {
+    print "usage: <pipe> | fmail <to> [what it's for]   or   fmail <to> <what to say...>"
     return
   }
-  if (which fm | is-empty) {
-    error make --unspanned { msg: "fm (Apple Foundation Models CLI, macOS 27) not found — use `mail` instead." }
+  let have_fm = (which fm | is-not-empty)
+  let have_claude = (which claude | is-not-empty)
+  if (not $have_fm) and (not $have_claude) {
+    error make --unspanned { msg: "no model available — need `fm` (macOS 27) or the `claude` CLI." }
   }
-  let msg = (_fmail_parse (_fm_generate $ctx) $ctx)
+  # Route by size. "A few lines" -> on-device; more -> cloud.
+  let long = (($raw_material | lines | where {|l| ($l | str trim) != "" } | length) > 6)
+  let raw = (if (not $long) and $have_fm {
+      # Short: on-device. Trim (usually a no-op here) so it always fits.
+      let material = (_fm_fit $raw_material 2800)
+      if ($material != ($raw_material | str trim)) {
+        print $"(ansi yellow)note(ansi reset) input trimmed to fit the on-device model."
+      }
+      _fm_respond (_fmail_prompt $words $material) "system"
+    } else {
+      # Long (or no on-device model): cloud. Try Apple's private cloud, then Claude.
+      let prompt = (_fmail_prompt $words $raw_material)
+      let pcc = (if $have_fm {
+          try { { ok: true, text: (_fm_respond $prompt "pcc") } } catch {|e| { ok: false, err: $e.msg } }
+        } else { { ok: false, err: "fm not installed" } })
+      if $pcc.ok {
+        $pcc.text
+      } else if $have_claude {
+        print $"(ansi yellow)note(ansi reset) Apple cloud unavailable — composing with Claude."
+        _claude_respond $prompt
+      } else {
+        error make --unspanned { msg: $"cloud compose failed: ($pcc.err)" }
+      }
+    })
+  let msg = (_fmail_parse $raw (_fmail_prompt $words $raw_material))
   let action = (if $send { "send" } else { "draft" })
   _mail_deliver $to $cc $bcc $from $msg.subject $msg.body $action
   if $send {
@@ -241,15 +317,75 @@ def fmail [
   }
 }
 
-# Compose the email with the on-device model (fm CLI, macOS 27). `fm schema`
-# pins the output shape, so the reply is guaranteed {subject, body} JSON.
-def _fm_generate [context: string] {
+# Trim material to a token budget the on-device model can hold (its context is
+# ~4k tokens; leave room for the instructions and the generated reply). Cheap
+# length gate first, then `fm token-count`; truncates by proportional character
+# length and marks the cut. Never grows short input.
+def _fm_fit [material: string, budget: int] {
+  let m = ($material | str trim)
+  if ($m | str length) < ($budget * 2) { return $m }
+  let toks = (try { $m | ^fm token-count | into int } catch { 0 })
+  if $toks == 0 or $toks <= $budget { return $m }
+  let keep = ($m | str length) * $budget / $toks * 9 / 10 | into int
+  ($m | str substring 0..$keep | str trim) + "\n\n…[truncated to fit the on-device model]"
+}
+
+# Build the fm prompt: the word args are the intent, the piped data is the
+# material to ground the email in. Either or both may be present.
+def _fmail_prompt [words: string, material: string] {
+  let w = ($words | str trim)
+  let m = ($material | str trim)
+  if ($w | is-not-empty) and ($m | is-not-empty) {
+    $"Write the email described here:\n($w)\n\nBase it strictly on this material:\n($m)"
+  } else if ($w | is-not-empty) {
+    $"Write the email described here:\n($w)"
+  } else {
+    $"Write an email that conveys the following:\n($m)"
+  }
+}
+
+# Instructions shared by every compose backend. Keep the email GROUNDED: base it
+# only on what's given, summarize (don't transcribe), and never invent a sender,
+# greeting, signature, or sign-off (an ungrounded model happily makes up a "Dots
+# Team" and a "Hi <name>" — we forbid that).
+def _fmail_instructions [] {
+  ([
+    "You write emails: a short subject and a plain-text body."
+    "Summarize the given material in your own words — do NOT reproduce it"
+    "verbatim, and never copy long identifiers such as commit hashes or"
+    "timestamps. Base the email strictly on that material; never invent"
+    "facts, names, numbers, recipients, or events that are not present."
+    "Write only the message itself: no greeting line, no signature, no"
+    "sign-off, and no placeholders such as '[Your Name]' or an invented"
+    "team or company name. Keep it concise."
+  ] | str join ' ')
+}
+
+# Compose via the fm CLI on <model> ("system" on-device | "pcc" Apple's private
+# cloud). `fm schema` pins the reply to {subject, body} JSON.
+def _fm_respond [prompt: string, model: string] {
   let schema = (mktemp -t "fmail-schema.XXXXX")
   ^fm schema object --name Email --string subject --string body | save -f $schema
-  let r = ($context | ^fm respond --no-stream --schema $schema --instructions "You draft emails. From the context given, write a concise, friendly email: a short subject and a plain-text body ready to send." | complete)
+  let r = ($prompt | ^fm respond --model $model --no-stream --schema $schema --instructions (_fmail_instructions) | complete)
   rm -f $schema
   if $r.exit_code != 0 or ($r.stdout | str trim | is-empty) {
-    error make --unspanned { msg: $"fm failed: ($r.stderr | str trim)" }
+    error make --unspanned { msg: $"fm \(($model)\) failed: ($r.stderr | str trim)" }
+  }
+  $r.stdout | str trim
+}
+
+# Compose via the Claude CLI (headless cloud fallback). Same instructions; asks
+# for the {subject, body} JSON that _fmail_parse expects.
+def _claude_respond [prompt: string] {
+  let full = ([
+    (_fmail_instructions)
+    'Reply with ONLY a JSON object: {"subject": "…", "body": "…"} — no prose, no code fence.'
+    ""
+    $prompt
+  ] | str join "\n")
+  let r = ($full | ^claude -p | complete)
+  if $r.exit_code != 0 or ($r.stdout | str trim | is-empty) {
+    error make --unspanned { msg: $"claude failed: ($r.stderr | str trim)" }
   }
   $r.stdout | str trim
 }
