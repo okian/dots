@@ -154,14 +154,22 @@ end run
   if ($rows | is-empty) {
     error make --unspanned { msg: $"no Contacts entry with an email matches \"($name)\"" }
   }
-  # Prefer a single exact (case-insensitive) name match before giving up on
-  # ambiguity — lets "Kian" win even if it's also a substring of other names.
-  let exact = ($rows | where {|r| ($r.name | str lowercase) == ($name | str lowercase) })
-  if ($exact | length) == 1 { return ($exact | first | get email) }
-  if ($rows | length) > 1 {
-    error make --unspanned { msg: $"\"($name)\" is ambiguous in Contacts \(($rows | get name | str join ', ')\) — use a fuller name or the email address." }
+  # Rank matches so the best wins without prompting: exact full name (0) > a name
+  # word that starts with the query, e.g. 'hani' -> 'Haniyeh' (1) > plain
+  # substring (2). Only ambiguity *within* the best tier is an error.
+  let q = ($name | str lowercase | str trim)
+  let ranked = ($rows
+    | insert rank {|r|
+        let n = ($r.name | str lowercase)
+        if $n == $q { 0 } else if ($n | split row ' ' | any {|w| $w | str starts-with $q }) { 1 } else { 2 }
+      }
+    | sort-by rank
+    | uniq-by email)
+  let best = ($ranked | where rank == ($ranked | first | get rank))
+  if ($best | length) > 1 {
+    error make --unspanned { msg: $"\"($name)\" matches several contacts \(($best | get name | str join ', ')\) — use a fuller name or the email address." }
   }
-  $rows | first | get email
+  $best | first | get email
 }
 
 # Normalize a comma-separated recipient list: trim spaces and <angle brackets>,
@@ -204,7 +212,8 @@ def _mail_text [piped: any, words: list<string>] {
 
 # Compose in Mail.app via AppleScript. action: "send" | "draft". Values travel
 # as argv (never spliced into the script), so quoting in subjects/bodies is safe.
-# Attachments follow the 7 fixed args as extra argv items (absolute paths).
+# to/cc/bcc arrive already resolved (names → emails) and comma-joined by the
+# caller. Attachments follow the 7 fixed args as extra argv items (absolute paths).
 def _mail_deliver [to: string, cc: string, bcc: string, from: string, subject: string, body: string, action: string, attachments: list<string>] {
   if ($nu.os-info.name != 'macos') {
     error make --unspanned { msg: "mail/fmail drive Apple Mail — macOS only." }
@@ -255,7 +264,7 @@ on splitAddrs(s)
   return parts
 end splitAddrs
 '
-  ^osascript -e $script (_mail_addrs $to) (_mail_addrs $cc) (_mail_addrs $bcc) ($from | str trim) $subject $body $action ...$attachments
+  ^osascript -e $script $to $cc $bcc ($from | str trim) $subject $body $action ...$attachments
 }
 
 # Expand + validate attachment paths (relative to the current dir or ~). Errors
@@ -290,10 +299,15 @@ def mail [
     print "usage: <pipe> | mail <to> -s <subject>   or   mail <to> <body...> -s <subject> [-a [file …]]"
     return
   }
+  # Resolve recipient names → emails and validate attachments first, so a bad
+  # name or missing file fails before anything is sent.
+  let to_r = (_mail_addrs $to)
+  let cc_r = (_mail_addrs $cc)
+  let bcc_r = (_mail_addrs $bcc)
   let files = (_mail_attachments $attach)
   let action = (if $draft { "draft" } else { "send" })
-  _mail_deliver $to $cc $bcc $from $subject $text $action $files
-  if $draft { print "==> draft opened in Mail." } else { print $"==> sent to ($to)." }
+  _mail_deliver $to_r $cc_r $bcc_r $from $subject $text $action $files
+  if $draft { print $"==> draft opened in Mail for ($to_r)." } else { print $"==> sent to ($to_r)." }
 }
 
 # Like `mail`, but a model writes the subject and body. The word args say what
@@ -320,6 +334,11 @@ def fmail [
     print "usage: <pipe> | fmail <to> [what it's for]   or   fmail <to> <what to say...>"
     return
   }
+  # Resolve recipient names → emails and validate attachments FIRST, so a bad
+  # name or missing file fails before we spend time composing.
+  let to_r = (_mail_addrs $to)
+  let cc_r = (_mail_addrs $cc)
+  let bcc_r = (_mail_addrs $bcc)
   let files = (_mail_attachments $attach)
   let have_fm = (which fm | is-not-empty)
   let have_claude = (which claude | is-not-empty)
@@ -354,11 +373,11 @@ def fmail [
     })
   let msg = (_fmail_parse $raw (_fmail_prompt $words $raw_material))
   let action = (if $send { "send" } else { "draft" })
-  _mail_deliver $to $cc $bcc $from $msg.subject $msg.body $action $files
+  _mail_deliver $to_r $cc_r $bcc_r $from $msg.subject $msg.body $action $files
   if $send {
-    print $"==> sent to ($to): ($msg.subject)"
+    print $"==> sent to ($to_r): ($msg.subject)"
   } else {
-    print $"==> draft opened in Mail: ($msg.subject)"
+    print $"==> draft opened in Mail for ($to_r): ($msg.subject)"
   }
 }
 
