@@ -75,14 +75,17 @@ def _theme_current [] {
 }
 
 # Active theme entry — from the generated palette.json if present, else the
-# registry. Lets config.nu / WezTerm work before `dots theme` is ever run.
+# registry. Validated and merged over the registry entry, so a stale or corrupt
+# generated file (older format, interrupted write) can never break config.nu —
+# missing keys just fall back to the registry defaults.
 def _theme_active [] {
+  let fallback = ($THEME_REGISTRY | get (_theme_current))
   let f = (_theme_dir | path join 'palette.json')
-  if ($f | path exists) {
-    try { open $f } catch { $THEME_REGISTRY | get (_theme_current) }
-  } else {
-    $THEME_REGISTRY | get (_theme_current)
-  }
+  if not ($f | path exists) { return $fallback }
+  let v = (try { open $f } catch { null })
+  if not (($v | describe) | str starts-with 'record') { return $fallback }
+  let vpal = (if ('palette' in $v) and (($v.palette | describe) | str starts-with 'record') { $v.palette } else { {} })
+  $fallback | merge $v | merge { palette: ($fallback.palette | merge $vpal) }
 }
 
 # Build a nushell color_config record from a palette (used by config.nu).

@@ -4,7 +4,8 @@ Quick reference for the aliases, commands, and keybindings this setup ships.
 View anytime with `dots cheatsheet`.
 
 > Shells: **nushell** is your default (vi edit mode); **zsh** is a lean
-> fallback (shared env, theme and aliases — the `tv` helpers live only in nu).
+> fallback (shared env, theme and aliases — the `tv` helpers and `mail`/`fmail`
+> live only in nu).
 
 ## Managing this setup — one command
 
@@ -59,6 +60,7 @@ shell, `:colorscheme <name>` for a running nvim). The choice lives in
 | `g` | `git` | |
 | `lg` | `lazygit` | visual git TUI |
 | `v`, `vim` | `nvim` | |
+| `c` | `claude` | Claude Code in the current dir |
 | `dc` | `docker compose` | docker CLI talks to the colima runtime natively |
 
 ## Functions / commands
@@ -74,6 +76,8 @@ shell, `:colorscheme <name>` for a running nvim). The choice lives in
 | `ports` | listening TCP ports + the owning process |
 | `killp` | fuzzy-pick a running process and kill it |
 | `gcap "msg"` | git add -A → commit → push, in one shot |
+| `mail <to> [body…]` | send via Apple Mail — body from pipe or args; `-s` subject, `--cc/--bcc/--from`, `--draft` to review first |
+| `fmail <to> [context…]` | Apple's on-device AI (`fm`) writes subject + body from the piped/arg context → opens a Mail draft; `--send` ships it directly |
 | `y` | open yazi; cd's to wherever you quit it — inside, `z`/`Z` fuzzy-jump via tv |
 | `z <dir>` | jump to a frecent directory (zoxide); `zi` = interactive picker (tv) |
 | `dots update` | upgrade configs + all toolchains to latest |

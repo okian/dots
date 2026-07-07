@@ -24,6 +24,7 @@ In Neovim: `<space>ff` finds files, `<space>/` greps the project, `<space>fv`/`<
 # --- editing ---
 Neovim is $EDITOR everywhere — git, kubectl, and anything else that opens an editor uses nvim.
 `v <file>` or `ff` opens Neovim; `<space>e` toggles the file tree.
+`c` opens Claude Code in the current directory (alias for `claude`).
 `lg` opens lazygit — stage hunks, write commits, manage branches visually.
 Commit subjects need a ticket key (e.g. ROG-1234) — the commit-msg hook enforces it.
 `gf`/`gd` in Neovim jump to definition; `K` shows hover docs; `<space>ca` for code actions.
@@ -58,3 +59,5 @@ Add any tool with `dots packages` — it opens packages.yaml and re-runs the ins
 `git dft` shows a structural, syntax-aware diff (difftastic); `git absorb` auto-fixups staged hunks.
 `btop` is a live system monitor; `dust` = disk usage, `duf` = free space, `procs` = process search.
 `sd 'old' 'new' file` is a saner find-and-replace than sed; `hyperfine 'cmd'` benchmarks it.
+`ls | mail you@x.com -s "subject"` emails the pipe via Apple Mail (`--cc`, `--bcc`, `--from`, `--draft` to review first).
+`fmail you@x.com "say thanks for the review"` — Apple's on-device AI writes the email and opens it as a Mail draft; `--send` ships it directly.
