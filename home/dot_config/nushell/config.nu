@@ -127,6 +127,7 @@ def gcap [message: string] {
 #           whatever context you pipe/pass; opens a DRAFT for review by default.
 # Recipients (to/cc/bcc) may be an email OR a Contacts name — a bare name (no @)
 # is resolved via macOS Contacts (first use prompts once for Contacts access).
+# Attach files with -a and a LIST (nushell can't repeat a flag): -a [a.pdf b.png].
 
 # Resolve a person's name to an email via macOS Contacts. Returns the email of
 # the single best match; errors (never guesses) if there's no match or it's
@@ -203,13 +204,22 @@ def _mail_text [piped: any, words: list<string>] {
 
 # Compose in Mail.app via AppleScript. action: "send" | "draft". Values travel
 # as argv (never spliced into the script), so quoting in subjects/bodies is safe.
-def _mail_deliver [to: string, cc: string, bcc: string, from: string, subject: string, body: string, action: string] {
+# Attachments follow the 7 fixed args as extra argv items (absolute paths).
+def _mail_deliver [to: string, cc: string, bcc: string, from: string, subject: string, body: string, action: string, attachments: list<string>] {
   if ($nu.os-info.name != 'macos') {
     error make --unspanned { msg: "mail/fmail drive Apple Mail — macOS only." }
   }
   let script = '
 on run argv
-  set {theTo, theCc, theBcc, theFrom, theSubject, theBody, theAction} to argv
+  set theTo to item 1 of argv
+  set theCc to item 2 of argv
+  set theBcc to item 3 of argv
+  set theFrom to item 4 of argv
+  set theSubject to item 5 of argv
+  set theBody to item 6 of argv
+  set theAction to item 7 of argv
+  set theAttachments to {}
+  if (count of argv) > 7 then set theAttachments to items 8 thru -1 of argv
   tell application "Mail"
     set msg to make new outgoing message with properties {subject:theSubject, content:theBody, visible:(theAction is "draft")}
     tell msg
@@ -222,9 +232,14 @@ on run argv
       repeat with a in my splitAddrs(theBcc)
         make new bcc recipient at end of bcc recipients with properties {address:(contents of a)}
       end repeat
+      repeat with a in theAttachments
+        make new attachment with properties {file name:(POSIX file (contents of a))} at after the last paragraph of content
+      end repeat
     end tell
     if theFrom is not "" then set sender of msg to theFrom
     if theAction is "send" then
+      -- let Mail finish encoding attachments before it fires the message off
+      if (count of theAttachments) > 0 then delay 1
       send msg
     else
       activate
@@ -240,29 +255,44 @@ on splitAddrs(s)
   return parts
 end splitAddrs
 '
-  ^osascript -e $script (_mail_addrs $to) (_mail_addrs $cc) (_mail_addrs $bcc) ($from | str trim) $subject $body $action
+  ^osascript -e $script (_mail_addrs $to) (_mail_addrs $cc) (_mail_addrs $bcc) ($from | str trim) $subject $body $action ...$attachments
+}
+
+# Expand + validate attachment paths (relative to the current dir or ~). Errors
+# (listing every missing file) before Mail opens, not after. The check is hoisted
+# out of the map so the message isn't swallowed by `each`'s wrapper error.
+def _mail_attachments [files: list<string>] {
+  let expanded = ($files | each {|f| $f | path expand })
+  let missing = ($expanded | where {|p| not ($p | path exists) })
+  if ($missing | is-not-empty) {
+    error make --unspanned { msg: $"attachment not found: ($missing | str join ', ')" }
+  }
+  $expanded
 }
 
 # Send an email with Apple Mail. Body = the word args and/or piped input; when
 # both are given, the words go first and the pipe follows on the next line.
+# --attach takes a LIST of files (nushell can't repeat a flag): -a [a.pdf b.png].
 # --from picks the sending account (default: Mail's default account);
 # --draft opens the message in Mail for review instead of sending.
 def mail [
-  to: string                 # recipient(s), comma-separated
-  ...body: string            # body text (ignored when input is piped)
+  to: string                 # recipient(s): email or Contacts name, comma-separated
+  ...body: string            # body text (combined with any piped input)
   --subject (-s): string = ""
   --cc: string = ""
   --bcc: string = ""
   --from: string = ""        # sending address (must match a Mail account)
+  --attach (-a): list<string> = []   # file(s) to attach:  -a [report.pdf logo.png]
   --draft (-d)               # review in Mail instead of sending straight away
 ] {
   let text = (_mail_text $in $body)
-  if ($text | str trim | is-empty) and ($subject | is-empty) {
-    print "usage: <pipe> | mail <to> -s <subject>   or   mail <to> <body...> -s <subject>"
+  if ($text | str trim | is-empty) and ($subject | is-empty) and ($attach | is-empty) {
+    print "usage: <pipe> | mail <to> -s <subject>   or   mail <to> <body...> -s <subject> [-a [file …]]"
     return
   }
+  let files = (_mail_attachments $attach)
   let action = (if $draft { "draft" } else { "send" })
-  _mail_deliver $to $cc $bcc $from $subject $text $action
+  _mail_deliver $to $cc $bcc $from $subject $text $action $files
   if $draft { print "==> draft opened in Mail." } else { print $"==> sent to ($to)." }
 }
 
@@ -281,6 +311,7 @@ def fmail [
   --cc: string = ""
   --bcc: string = ""
   --from: string = ""        # sending address (must match a Mail account)
+  --attach (-a): list<string> = []   # file(s) to attach:  -a [report.pdf logo.png]
   --send                     # send immediately instead of opening the draft
 ] {
   let words = ($context | str join ' ' | str trim)
@@ -289,6 +320,7 @@ def fmail [
     print "usage: <pipe> | fmail <to> [what it's for]   or   fmail <to> <what to say...>"
     return
   }
+  let files = (_mail_attachments $attach)
   let have_fm = (which fm | is-not-empty)
   let have_claude = (which claude | is-not-empty)
   if (not $have_fm) and (not $have_claude) {
@@ -322,7 +354,7 @@ def fmail [
     })
   let msg = (_fmail_parse $raw (_fmail_prompt $words $raw_material))
   let action = (if $send { "send" } else { "draft" })
-  _mail_deliver $to $cc $bcc $from $msg.subject $msg.body $action
+  _mail_deliver $to $cc $bcc $from $msg.subject $msg.body $action $files
   if $send {
     print $"==> sent to ($to): ($msg.subject)"
   } else {
