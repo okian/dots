@@ -185,10 +185,20 @@ def _mail_render [piped: any] {
   }
 }
 
-# `mail` body resolution: piped input wins; otherwise the trailing word args.
+# `mail` body resolution. The word args are the body; piped input is the
+# content. When BOTH are given, the words come first, then a newline, then the
+# pipe — so `ls | mail x "here are the files:"` reads as the line then the list.
+# Either one alone is used as-is.
 def _mail_text [piped: any, words: list<string>] {
   let rendered = (_mail_render $piped)
-  if ($rendered | str trim | is-empty) { $words | str join ' ' } else { $rendered }
+  let w = ($words | str join ' ')
+  if ($w | is-empty) {
+    $rendered
+  } else if ($rendered | str trim | is-empty) {
+    $w
+  } else {
+    $w + "\n" + $rendered
+  }
 }
 
 # Compose in Mail.app via AppleScript. action: "send" | "draft". Values travel
@@ -233,7 +243,8 @@ end splitAddrs
   ^osascript -e $script (_mail_addrs $to) (_mail_addrs $cc) (_mail_addrs $bcc) ($from | str trim) $subject $body $action
 }
 
-# Send an email with Apple Mail. Body from the pipe, or as trailing words.
+# Send an email with Apple Mail. Body = the word args and/or piped input; when
+# both are given, the words go first and the pipe follows on the next line.
 # --from picks the sending account (default: Mail's default account);
 # --draft opens the message in Mail for review instead of sending.
 def mail [
@@ -283,8 +294,10 @@ def fmail [
   if (not $have_fm) and (not $have_claude) {
     error make --unspanned { msg: "no model available — need `fm` (macOS 27) or the `claude` CLI." }
   }
-  # Route by size. "A few lines" -> on-device; more -> cloud.
-  let long = (($raw_material | lines | where {|l| ($l | str trim) != "" } | length) > 6)
+  # Route by size: a few lines stay on-device; more (by line OR char count, so a
+  # single long blob also counts) goes to the cloud.
+  let nonempty = ($raw_material | lines | where {|l| ($l | str trim) != "" } | length)
+  let long = ($nonempty > 6) or (($raw_material | str length) > 800)
   let raw = (if (not $long) and $have_fm {
       # Short: on-device. Trim (usually a no-op here) so it always fits.
       let material = (_fm_fit $raw_material 2800)
@@ -330,35 +343,36 @@ def _fm_fit [material: string, budget: int] {
   ($m | str substring 0..$keep | str trim) + "\n\n…[truncated to fit the on-device model]"
 }
 
-# Build the fm prompt: the word args are the intent, the piped data is the
-# material to ground the email in. Either or both may be present.
+# Build the model prompt: the word args are the goal/intent, the piped data is
+# the material to ground the email in. Either or both may be present.
 def _fmail_prompt [words: string, material: string] {
   let w = ($words | str trim)
   let m = ($material | str trim)
   if ($w | is-not-empty) and ($m | is-not-empty) {
-    $"Write the email described here:\n($w)\n\nBase it strictly on this material:\n($m)"
+    $"Write an email that accomplishes this:\n($w)\n\nBase it on this material — summarize it, do not copy it verbatim:\n($m)"
   } else if ($w | is-not-empty) {
-    $"Write the email described here:\n($w)"
+    $"Write an email that accomplishes this:\n($w)"
   } else {
-    $"Write an email that conveys the following:\n($m)"
+    $"Write an email that presents and summarizes the following:\n($m)"
   }
 }
 
 # Instructions shared by every compose backend. Keep the email GROUNDED: base it
 # only on what's given, summarize (don't transcribe), and never invent a sender,
 # greeting, signature, or sign-off (an ungrounded model happily makes up a "Dots
-# Team" and a "Hi <name>" — we forbid that).
+# Team" and a "Hi <name>" — we forbid that). One rule per line so the small
+# on-device model can track them.
 def _fmail_instructions [] {
   ([
-    "You write emails: a short subject and a plain-text body."
-    "Summarize the given material in your own words — do NOT reproduce it"
-    "verbatim, and never copy long identifiers such as commit hashes or"
-    "timestamps. Base the email strictly on that material; never invent"
-    "facts, names, numbers, recipients, or events that are not present."
-    "Write only the message itself: no greeting line, no signature, no"
-    "sign-off, and no placeholders such as '[Your Name]' or an invented"
-    "team or company name. Keep it concise."
-  ] | str join ' ')
+    "You are the user's email-writing assistant. Turn the request into a ready-to-send email: a specific subject line and a plain-text body. Rules:"
+    "- Write in the first person, as the sender. Use the tone the request asks for; otherwise keep it neutral and professional."
+    "- Ground every statement in the request and material provided. Never invent facts, names, numbers, dates, links, recipients, or events that are not given."
+    "- If the material is a list or log, summarize it in your own words — do not copy it verbatim, and never reproduce long tokens like commit hashes, IDs, or timestamps."
+    "- Make the subject specific and informative — never generic like 'Update' or 'Hello'."
+    "- The body is plain text only: no Markdown, asterisks, backticks, or headings."
+    "- Do not fabricate an identity: never invent or guess the sender's or recipient's name, a team, company, or product; never use a placeholder like '[Your Name]'; and add no signature or sign-off. Prefer no greeting — if the tone calls for one, keep it generic ('Hi,') and never guess a name."
+    "- Be concise — no longer than the content needs; skip filler pleasantries."
+  ] | str join (char nl))
 }
 
 # Compose via the fm CLI on <model> ("system" on-device | "pcc" Apple's private
@@ -379,7 +393,7 @@ def _fm_respond [prompt: string, model: string] {
 def _claude_respond [prompt: string] {
   let full = ([
     (_fmail_instructions)
-    'Reply with ONLY a JSON object: {"subject": "…", "body": "…"} — no prose, no code fence.'
+    'Output ONLY a JSON object with two keys, "subject" and "body" (both plain-text strings). No prose, no code fences.'
     ""
     $prompt
   ] | str join "\n")
